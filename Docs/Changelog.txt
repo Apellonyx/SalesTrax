@@ -1,0 +1,69 @@
+v0.1.0 2023-04-20:
+	- General Description:
+		This is the initial upload of the project, containing the first functional iteration of the SalesTrax program.
+	- New files:
+		- 1 .py file
+			- 'main.py'
+		- 1 LICENSE file
+			-'LICENSE'
+		- 1 .md file
+			- 'README.md'
+		- 'Docs' folder:
+			- 1 .json file
+				- 'settings.json'
+			- 7 .txt files
+				- 'Changelog.txt'
+				- 'Function Headers.txt'
+				- 'Image Attribution Readme 1.txt'
+				- 'Image Attribution Readme 2.txt'
+				- 'Image Attribution Readme 3.txt'
+				- 'Object Hierarchy'
+				- 'To-Do List.txt'
+		- 'Images' folder:
+			- 1 .ico file
+				- 'salestrax_icon_bw.ico'
+			- '20' folder:
+				- 21 .png files
+					- 'categories.png'
+					- 'chart_bar.png'
+					- 'chart_line.png'
+					- 'chart_pie.png'
+					- 'commit_all.png'
+					- 'commit_selection.png'
+					- 'delete_selection.png'
+					- 'employees.png'
+					- 'export.png'
+					- 'filter.png'
+					- 'help.png'
+					- 'hide_deleted.png'
+					- 'hide_invalid.png'
+					- 'hide_saved.png'
+					- 'hide_temp.png'
+					- 'import.png'
+					- 'locations.png'
+					- 'refresh_view.png'
+					- 'reject_all.png'
+					- 'reject_selection.png'
+					- 'restore_selection.png'
+			- '32' folder:
+				- 1 .png file
+					- 'question.png'
+			- 'logo' folder:
+				- 10 .png files
+					- 'salestrax_logo_16.png'
+					- 'salestrax_logo_20.png'
+					- 'salestrax_logo_24.png'
+					- 'salestrax_logo_32.png'
+					- 'salestrax_logo_48.png'
+					- 'salestrax_logo_64.png'
+					- 'salestrax_logo_96.png'
+					- 'salestrax_logo_128.png'
+					- 'salestrax_logo_256.png'
+					- 'salestrax_logo_512.png'
+		- 'Test Data' folder:
+			- 1 .csv file
+				- 'sampleData (2022).csv'
+			- 3 .xlsx files
+				- 'sampleData (Central).xlsx'
+				- 'sampleData (Full).xlsx'
+				- 'testFile.xlsx'

@@ -1,0 +1,306 @@
+{
+	"editor.renderWhitespace": "none",
+	"files.exclude": {
+		"**/.classpath": true,
+		"**/.project": true,
+		"**/.settings": true,
+		"**/.factorypath": true
+	},
+	"workbench.iconTheme": "vscode-icons",
+	"vsicons.dontShowNewVersionMessage": true,
+	"C_Cpp.updateChannel": "Insiders",
+	"terminal.integrated.shell.windows": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+	"java.semanticHighlighting.enabled": false,
+	"highlight.regexes": {
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:HEADLINE|H:|HEADING|HEADER|WHITE)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#FFFFFF",
+					"backgroundColor": "#FFFFFF",
+					"color": "#0000FF",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#FFFFFF",
+					"color": "#0000FF",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:SECTION|S:|SEGMENT|LABEL|GRAY)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#666666",
+					"backgroundColor": "#666666",
+					"color": "#DDDDDD",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#666666",
+					"color": "#DDDDDD",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:OLD|X:|DEPRECATED|REMOVED|BLACK)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#000000",
+					"backgroundColor": "#000000",
+					"color": "#333333",
+					"fontWeight": "bold",
+					"textDecoration": "line-through"
+				},
+				{
+					"backgroundColor": "#000000",
+					"color": "#333333",
+					"fontWeight": "bold",
+					"textDecoration": "line-through"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:BUG|B:|FIX|FIXME|HACK|RED)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#CC0000",
+					"backgroundColor": "#CC0000",
+					"color": "#DDDDDD",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#CC0000",
+					"color": "#DDDDDD",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:TASK|T:|TO-DO|TODO|INCOMPLETE|ORANGE)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#FF8800",
+					"backgroundColor": "#FF8800",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#FF8800",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:REVIEW|R:|OPTIMIZE|UGLY|DOCUMENT|DOCUMENTATION|YELLOW)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#FFFF00",
+					"backgroundColor": "#FFFF00",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#FFFF00",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:IDEA|I:|CONCEPT|FUTURE|LOOKUP|MAYBE|QUESTION|GREEN)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#00CC33",
+					"backgroundColor": "#00CC33",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#00CC33",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:PLACEHOLDER|P:|STANDIN|TEMP|CYAN)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#00FFFF",
+					"backgroundColor": "#00FFFF",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#00FFFF",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:NOTES|N:|ATTN|ATTENTION|CLARITY|BLUE)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#3399FF",
+					"backgroundColor": "#3399FF",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#3399FF",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:UPDATED|U:|CORRECTED|REVISED|COMPLETED|FINISHED|PURPLE)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#660099",
+					"backgroundColor": "#660099",
+					"color": "#DDDDDD",
+					"fontWeight": "bold",
+				},
+				{
+					"backgroundColor": "#660099",
+					"color": "#DDDDDD",
+					"fontWeight": "bold"
+				}
+			]
+		},
+		"((?:<!-- *)?(?:#|// @|//|./\\*+|<!--|--|\\* @|{!|{{!--|{{!) *(?:OPTION|O:|ALT|ALTERNATIVE|BACKUP|PINK)(?:\\s*\\([^)]+\\))?:?)((?!\\w)(?: *-->| *\\*/| *!}| *--}}| *}}|(?= *(?:[^:]//|/\\*+|<!--|@|--|{!|{{!--|{{!))|(?: +[^\\n@]*?)(?= *(?:[^:]//|/\\*+|<!--|@|--(?!>)|{!|{{!--|{{!))|(?: +[^@\\n]+)?))": {
+			"filterFileRegex": ".*(?<!CHANGELOG.md)$",
+			"decorations": [
+				{
+					"overviewRulerColor": "#FF66CC",
+					"backgroundColor": "#FF66CC",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				},
+				{
+					"backgroundColor": "#FF66CC",
+					"color": "#1F1F1F",
+					"fontWeight": "bold"
+				}
+			]
+		}
+	},
+	"atomKeymap.promptV3Features": true,
+	"editor.multiCursorModifier": "ctrlCmd",
+	"editor.formatOnPaste": true,
+	"[html]": {
+		"editor.defaultFormatter": "svipas.prettier-plus"
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "svipas.prettier-plus"
+	},
+	"workbench.startupEditor": "none",
+	"[python]": {
+		"editor.formatOnType": true,
+		"editor.defaultFormatter": "ms-python.black-formatter"
+	},
+	"better-comments.tags": [
+		{
+			"tag": "--",
+			"color": "#DDDDDD",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": true,
+			"italic": false
+		},
+		{
+			"tag": "_",
+			"color": "#666666",
+			"strikethrough": true,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "!",
+			"color": "#FF0000",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "&",
+			"color": "#FF8800",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "?",
+			"color": "#FFFF00",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "$",
+			"color": "#00CC33",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": true,
+			"italic": false
+		},
+		{
+			"tag": "<<",
+			"color": "#00FFFF",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "*",
+			"color": "#3399FF",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "^",
+			"color": "#9933CC",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		},
+		{
+			"tag": "%",
+			"color": "#FF66CC",
+			"strikethrough": false,
+			"underline": false,
+			"backgroundColor": "transparent",
+			"bold": false,
+			"italic": false
+		}
+	],
+	"editor.wordWrap": "on",
+	"better-comments.highlightPlainText": true,
+	"editor.insertSpaces": false,
+	"editor.indentSize": "tabSize",
+	"autoDocstring.startOnNewLine": true,
+	"line-length-checker.lineLength": 120
+}

@@ -1,0 +1,68 @@
+- root
+	- menu_bar
+		- file_menu
+			- "Import From..."
+			- "Export To..."
+			- "Clear All Data"
+			- "Exit SalesTrax"
+		- edit_menu
+			- "Refresh Table"
+			- "Commit Selection"
+			- "Commit All"
+			- "Reject Selection"
+			- "Reject All"
+			- "Delete Selection"
+			- "Restore Selection"
+		- view_menu
+			- "Hide Saved Records"
+			- "Hide Temporary Records"
+			- "Hide Invalid Records"
+			- "Hide Deleted Records"
+			- "Open Datalog Window"
+			- "Save Datalog Contents"
+			- "Toggle Filter..."
+		- list_menu
+			- "Employees"
+			- "Locations"
+			- "Product Categories"
+		- data_menu
+			- "Line Chart"
+			- "Bar Chart"
+			- "Pie Chart"
+		- help_menu
+			- "User Manual"
+			- "Changelog"
+			- "Online Docs..."
+			- "GitHub Issues..."
+	- sc_bar
+		- btn_import
+		- btn_export
+		- btn_commit_s
+		- btn_commit_a
+		- btn_reject_s
+		- btn_reject_a
+		- btn_delete
+		- btn_restore
+		- btn_refresh
+		- btn_hide_saved
+		- btn_hide_temp
+		- btn_hide_invalid
+		- btn_hide_deleted
+		- btn_employee
+		- btn_location
+		- btn_category
+		- btn_line
+		- btn_bar
+		- btn_pie
+		- btn_help
+		- btn_logo
+	- base_tree
+		- scroll_tree
+	- status_bar
+		- status_file
+		- status_clock
+	- datalog
+		- datalog_body
+			- scroll_log
+	- img_question
+	- glb_theme

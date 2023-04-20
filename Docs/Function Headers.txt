@@ -1,0 +1,233 @@
+Note that this document is *NOT* complete. It simply documents those functions that are already in the "main.py" file at
+this moment. Also note that it uses conventions set up in a custom configuration of "Better Comments" (by Aaron Bond)
+for Visual Studio Code. Symbols and hashtags that appear at the beginning of a line are used for color-coding purposes
+to keep track of the completion status of various tasks. A copy of the custom configuration file used in this project
+can be found in the "Docs" folder under the name "settings.json". To view this project with its original color-coding,
+back up your own "C:\Users\{User}\AppData\Roaming\Code\User\settings.json" file and replace it with the one provided in
+the "Docs" folder.
+
+Lines beginning with "^" are fully implemented and have documentation completed.
+Lines beginning with "?" are fully implemented, but lack proper documentation.
+Lines beginning with "&" are incomplete (and may or may not have documentation).
+Lines beginning with "<<" are placeholder functions with no documentation.
+
+-----
+
+^ check_temp_count():
+    Check that 'records_temp' is empty before attempting to load a file.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ clear_all_data():
+    Clears all loaded data from all persistent lists EXCEPT 'datalog_msgs'. It allows the user to continue using the
+    program to work on another document set without needing to close the program to do so.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ clear_table():
+    Clears the contents of the primary viewport (typically used for updating the table contents).
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ commit_all():
+    Moves temp records from the temp record list into the saved records
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ commit_popup():
+    Displays a top-level popup asking how the user wishes to handle temporary records. Options are: "Commit All",
+    "Reject All", and "Review Temporary".
+
+    Args: None
+    Raises: None
+    Returns: None
+
+? commit_selection():
+
+? delete_selection():
+
+^ disable_resize(event):
+    Prevents manual resizing of table column headers and its associated mouse graphic by interrupting the default
+    behavior of left-clicking and mouse motion when the mouse is positioned over a column separator.
+
+    Args:
+        event (tkinter.Event): A standard tkinter keybinding event. In this case, it is either '<Button-1>' (left-click)
+            or '<Motion>' (mouse movement), but it should not be manually declared.
+
+    Returns:
+        str: This returns "break" back to the calling event, preventing it from performing its default behavior.
+
+^ do_nothing():
+    Literally just does nothing. Used to disable default behavior on things like "Close Window" buttons, etc.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ exit_functions():
+    Postpones exiting the program to perform obligatory exit functions such as saving the Datalog.
+    
+    Args: None
+    Raises: None
+    Returns: None
+
+^ export_file():
+    This opens the 'Save File As...' dialog to export an Excel, ODS, or CSV file to disk. When successful,
+    passes the file info to 'write_file()' for use.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ get_selection(stop_select: bool = False):
+    Grabs the contents of the currently selected line in the viewport table and uses that information to locate the
+    record in its respective record list.
+
+    Args:
+        stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the
+            record's list location. When used for record modifications, this should always be set to True, but for
+            purposes that don't change the record values, set it to False. Defaults to False.
+
+    Raises: None
+    Returns:
+        list: When successful, this returns a list that can be used by another function to locate and access the item
+            more easily.
+
+^ link_to_github():
+    Opens a link to the SaleTrax repository on GitHub.
+    
+    Args: None
+    Raises: None
+    Returns: None
+
+^ load_file():
+    This opens the file select dialog to load an Excel, ODS, or CSV file from disk. When successful, passes this file
+    to 'pop_temp()' for use.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ log_msg(msg: str = "This event is not functional yet.", popup: bool = True):
+    Logs changes to the record lists in the Datalog. Optionally displays a top-level messagebox to the user with the
+    same message.
+
+    Args:
+        msg (str, optional): Message to record in the Datalog. Defaults to "This event is not functional yet."
+        popup (bool, optional): If True, display a top-level messagebox with the message contents. Defaults to True.
+    Raises: None
+    Returns: None
+
+<< pop_filter():
+
+^ pop_master(send_log: bool = False):
+    This clears the current master record list and repopulates it with data from the saved, deleted, invalid, and temp
+    record lists. It is called any time the component record lists are modified, refreshing of the viewport table.
+
+    Args:
+        send_log (bool, optional): When True, a Datalog entry is sent to 'log_msg' containing an updated total record
+            count. Note that this does NOT result in a popup, only a log entry. Defaults to False.
+    Raises: None
+    Returns: None
+
+^ pop_temp(path: str):
+    Converts a tabular source document into a list of dictionaries for the program to work from.
+
+    Args:
+        path (str): The file path to the source document.
+    Raises: None
+    Returns: None
+
+^ pop_table():
+    Populates the viewport table (Treeview widget) with data. If any filter or sort is active, it will populate with
+    the contents of the filtered record list; otherwise, it will populate with the contents of the master record list.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ refresh_table(repop_table: bool = True, master_log: bool = False):
+    Clears the contents of the viewport table, refreshes the contents of the master and filtered record lists, and then
+    repopulates the viewport table with updated data.
+
+    Args:
+        repop_table (bool, optional): Whether to repopulate the viewport table after clearing it. Set this to False for
+            simply clearing the table. Defaults to True.
+        master_log (bool, optional): Whether to send a Datalog message when repopulating the master record list. Set
+            this to True when performing record modifications. Defaults to False.
+    Raises: None
+    Returns: None
+
+^ reject_all():
+    Permanently removes all temporary records from the program.
+    
+    Args: None
+    Raises: None
+    Returns: None
+
+? reject_selection():
+
+? restore_selection():
+
+^ root_update():
+    A recreation of a traditional main loop run every 100 ms, written as a partial redirection of the 'mainloop()'
+    function from 'tkinter' to allow custom actions to be defined in this file without overriding 'mainloop'.
+    
+    Args: None
+    Raises: None
+    Returns: None
+
+^ save_log():
+    Saves the contents of 'datalog_msgs' to a text file in the user's "My Documents/SalesTrax/Datalog" folder and clears
+    the contents of 'datalog_msgs'. Log files are appended with the date in "YYYY-MM-DD" format and an iterative 3-digit
+    index number that allows multiple logs to be saved on the same date without overwriting any earlier logs.
+    
+    Args: None
+    Raises: None
+    Returns: None
+
+^ select_toggle(state: bool):
+    Enables and disables menu options, shortcut buttons, and keybindings based on the record status of the currently
+    selected table row (or lack thereof).
+
+    Args:
+        state (bool): True when a row is selected, False when no row is selected.
+    Raises: None
+    Returns: None
+
+^ toggle_datalog(state: bool = False):
+    Handles the visibility of the Datalog window. Technically speaking, it does not actually close when SalesTrax is
+    running; it only hides.
+
+    Args:
+        state (bool, optional): When True, the Datalog becomes visible, and when False, it is hidden. Defaults to False.
+    Raises: None
+    Returns: None
+
+^ validate_temp():
+    Processes every individual record in the temp record list after importing to ensure they meet the requirements of
+    the program. This may include combining similar keys (such as "Date" and "Time" into "Timestamp"), renaming keys to
+    match existing records, checking user-defined validation strings to locate misspelled or incorrect names, locations,
+    or product categories, etc.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+<< view_temp():
+
+& write_file(path: str):
+    Writes all records with "Saved" status to a CSV, ODS, or XLSX file.
+
+    Args:
+        path (str): The filename and location of the new/updated file.
+    Raises: None
+    Returns: None

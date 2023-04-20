@@ -1,0 +1,71 @@
+Note that this document is *NOT* complete. It simply documents those tasks that are at the top of my priorities as of
+this moment. Also note that it uses conventions set up in a custom configuration of "Better Comments" (by Aaron Bond)
+for Visual Studio Code. Symbols and hashtags that appear at the beginning of a line are used for color-coding purposes
+to keep track of the completion status of various tasks. A copy of the custom configuration file used in this project
+can be found in the "Docs" folder under the name "settings.json". To view this project with its original color-coding,
+back up your own "C:\Users\{User}\AppData\Roaming\Code\User\settings.json" file and replace it with the one provided in
+the "Docs" folder.
+
+Lines beginning with "#Task:" are used as bullet points for each major task.
+Lines beginning with "#Alt:" are alternative solutions to the task being barinstormed.
+Lines beginning with "#Idea:" are potential changes that may or may not be implemented. Further research is required
+	before a final decision can be made.
+Lines beginning with "^" are implemented in a fully-functional capacity.
+Lines beginning with "?" are partially implemented, but cannot be completed without further application developments.
+Lines beginning with "*" are notes, rationalizations, and/or clarifications regarding the point immediately above them.
+And lines beginning with "&" are fully unimplemented.
+
+-----
+
+#Task: Create in-app user manual alongside project updates.
+& Start with making user manual pages for already-existing features and use-cases.
+& Then, as each feature is implemented, add a reference to it in the user manual.
+#Alt: Link to GitHub Wiki instead. The "Help" menu list already includes this as an option.
+& This would require significantly less coding, resulting in a smaller file size.
+
+#Idea: Merge selection-based tasks into either one or two functions.
+& 'commitSelection()', 'deleteSelection()', and 'restoreSelection()' all move records from one list to another.
+& 'rejectSelection()' stands out from these, as it removes records entirely, so it should probably stay.
+#Alt: Change functionality of 'rejectSelection()' to NOT remove records, but rather delete them.
+& In this case, 'commitSelection()' and 'restoreSelection()' would merge into 'saveSelection()'.
+& And 'rejectSelection()' would be merged into 'deleteSelection()'.
+& The redundant buttons, menu options, etc. could then be removed, slimming down the program.
+*	This would also make the program less confusing to an onlooker, who wouldn't know the difference between
+*		rejecting and deleting a record. If they have the same functionality, there should only be one function.
+
+# Task: Create a question popup asking if the user wants ODS timestamps in string format or as an integer.
+
+#Task: Create a new 'datalog' object and 'log_msg()' function to replace the existing 'message_box()'.
+? It should log data regarding the following:
+^	validation failures
+^	duplicate record exclusions
+^	commits
+^	rejections
+^	deletions
+^	restorations
+^	file loads
+&	error reports
+^ The datalog object opens in a console-like window, which can be accessed through the 'View' menu.
+^ It will need to be scrollable and display an accurate timestamp for each message.
+^	Data should be logged each time the user imports data during a session:
+^		This will save the file path of the source file, as well as the number of records imported.
+^		If any records fail validation, they will be logged along with the reason for validation failure.
+^	Data should also be logged each time a record or group of records is committed, rejected, deleted, or restored.
+^		Batch actions report the number of records affected by the action.
+^	The dataLog's contents automatically export to a text file when the user exports data or exits the program.
+^		This text file is named 'datalog_' and appended with the timestamp of when it was created.
+^ Also add 'save_log()' button.
+^    'save_log()' would write the contents of the 'dataLog' to a plain text file and then clear the widget.
+
+#Task: Figure out how to perform modifications on multiple selected treeview items simultaneously.
+
+#Task: Add window for user-defined field validation lists.
+& There should only be one Toplevel object that populates itself depending on the validation list chosen.
+&	Employee Names
+&	Business Locations
+&	Product Categories
+& Add spell-checking functionality to user validation lists.
+&	Look up and test the 'difflib' library's 'get_close_matches' function to find near-matches when they exist.
+&	When the program encounters a value that isn't in the validation list for that field, run the spell-checker.
+&	If it finds a near-match in the relevant list, display a popup asking if the field should be corrected.
+&	Make the spell-checking function opt-in for the user with a checkbox in each validation list window.

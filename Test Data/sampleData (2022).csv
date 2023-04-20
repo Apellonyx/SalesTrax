@@ -1,0 +1,22 @@
+Timestamp,Location,Employee,Product,Units,Unit Cost,Net Total
+2022-01-15,Central,Gill,Binder,46,8.99,413.54
+2022-02-01,Central,Smith,Binder,87,15.0,1305.0
+2022-02-18,East,Jones,Binder,4,4.99,19.96
+2022-03-07,West,Sorvino,Binder,7,19.99,139.93
+2022-03-24,Central,Jardine,Pen Set,50,4.99,249.5
+2022-04-10,Central,Andrews,Pencil,66,1.99,131.34
+2022-04-27,East,Howard,Pen,96,4.99,479.04
+2022-05-14,Central,Gill,Pencil,53,1.29,68.37
+2022-05-31,Central,Gill,Binder,80,8.99,719.2
+2022-06-17,Central,Kivell,Desk,5,125.0,625.0
+2022-07-04,East,Jones,Pen Set,62,4.99,309.38
+2022-07-21,Central,Morgan,Pen Set,55,12.49,686.95
+2022-08-07,Central,Kivell,Pen Set,42,23.95,1005.9
+2022-08-24,West,Sorvino,Desk,3,275.0,825.0
+2022-09-10,Central,Gill,Pencil,7,1.29,9.03
+2022-09-27,West,Sorvino,Pen,76,1.99,151.24
+2022-10-14,West,Thompson,Binder,57,19.99,1139.43
+2022-10-31,Central,Andrews,Pencil,14,1.29,18.06
+2022-11-17,Central,Jardine,Binder,11,4.99,54.89
+2022-12-04,Central,Jardine,Binder,94,19.99,1879.06
+2022-12-21,Central,Andrews,Binder,28,4.99,139.72
