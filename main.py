@@ -1,9 +1,9 @@
 """
 Program Name: SalesTrax
-Version: 0.1.1
+Version: 0.1.2
 Status: Prototype
 Created on: 2023-04-09
-Last updated: 2023-04-20
+Last updated: 2023-04-22
 Created with: Python 3.11.2
 Author: Danny Fleenor
 Contributors:
@@ -27,10 +27,14 @@ Description:
     exclusions in the output file, which include CSV, ODS, and XLSX format. Note that any documents without a "Date" or
     "Timestamp" column WILL be rejected from being imported, but there are no other solid requirements for file content.
     
-    Records can only be selected individually for now, so record status can only be updated one record at a time or all
-    at once. Multiple selection is planned to be part of the next update, though. The plan for that update also includes
-    elementary sorting and filtering, but PROPER filtering will not be available until later. Record modification, too,
-    is planned for implementation at some point, but I cannot promise exactly when that will be.
+    As of update 0.1.2, more than one record can now be selected at once, allowing CTRL and SHIFT clicking for multiple
+    selection. Clicking on a column header will sort the table using that column as the sort criterion, and the "Hide
+    Saved," "Hide Temp," "Hide Invalid," and "Hide Deleted" shortcut buttons (along with their respective "View" menu
+    counterparts) are now functional. Any active sorting or filtering can be reset back to program defaults by pressing
+    either the "Toggle Filter..." button on the shortcut bar or its counterpart in the "View" menu cascade.
+    
+    PROPER filtering will not be available until a later update. Record modification, too, is planned for implementation
+    at some point, but I cannot promise exactly when that will be.
 """
 # Section: Imports
 import os
@@ -68,7 +72,11 @@ class stvars:
     valid_employees = list()
     # Validation strings for the 'Location' field
     valid_locations = list()
+    
     current_file = str()
+    filter_toggle = bool()
+    sort_column = str()
+    sort_descending = bool(True)
 
 
 # HEADLINE: Function definitions
@@ -161,7 +169,7 @@ def clear_table():
 # Updated: All good for now.
 def commit_all():
     """
-    Moves temp records from the temp record list into the saved records
+    Moves all temp records from the temp record list into the saved records list.
 
     Args: None
     Raises: None
@@ -173,7 +181,7 @@ def commit_all():
     if len(stvars.records_temp) > 0:
         # Deselect any currently selected rows:
         # * This is in place because if a record is still selected when 'Status' values are modified,
-        # * it causes an infinite loop in the 'get_selected()' function.
+        # * it causes an infinite loop in the 'get_selection()' function.
         if len(base_tree.selection()) > 0:
             base_tree.selection_remove(base_tree.selection()[0])
         iter8 = 0
@@ -275,7 +283,12 @@ def commit_popup():
         # Have the 'Review Temporary' set the record filter to only show temp records:
         command=lambda: [
             root.attributes("-disabled", False),
-            view_temp(),
+            # Turn off any currently active filters and/or sorting:
+            toggle_filter(),
+            # Turn on all 'Hide *' filters except 'Hide Temporary Records':
+            view_menu.invoke("Hide Saved Records"),
+            view_menu.invoke("Hide Deleted Records"),
+            view_menu.invoke("Hide Invalid Records"),
             popup.destroy(),
         ],
     )
@@ -291,66 +304,127 @@ def commit_popup():
     btn_review_temp.grid(row=1, column=2, padx=(0, 40), pady=(10, 25))
 
 
-# Idea: Remove restore and reject options altogether and replace them with 'Commit' and 'Delete' only.
-# $ Essentially, restore and commit do the same thing anyway. Same with reject and delete. There's no need to recognize
-# $ them as two separate functions when they use almost exactly the same code.
-# Alternative: An even more slimmed-down option would be to remove 'Delete' as well.
-# % There could potentially be just one function that handles moving records from one record list to another. It would
-# % require a minor rewrite to 'get_selected()', but if that function passed the actual record list into the
-# % 'data_address' list instead of passing the 'Status' key value, then the 'commit_selection()' function (or whatever
-# % replaces it) would be able to dynamically build the record modification commands from that.
-# Document: Add docstring and topline comments.
-# ? I'm leaving the documentation incomplete for now in lieu of contemplating the changes above. If I decide to
-# ? implement either change, the documentation would change anyway; no need to do it twice.
+# Updated: All good for now.
 def commit_selection():
+    """
+    Adds selected temp records to the saved records list and restores deleted records. Supports single and multiple
+    selections.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    # Get record list info for all of the selected rows:
     data_address = get_selection(stop_select=True)
     if data_address is not None:
-        if data_address[0] == "Temporary":
-            # Notes: The next code line raises a warning in PyCharm, but it isn't an error.
-            # * The problem stems from PyCharm not recognizing that 'stvars.records_temp[data_address[1]]' refers to a
-            # * dictionary, not a list. It's not a big deal, but I thought I should mention it in case someone takes
-            # * over the code, tries to fix it, and breaks the program in the process. Don't fix it. It's not broken.
-            stvars.records_temp[data_address[1]]["Status"] = "Saved"
-            stvars.records_saved.append(stvars.records_temp[data_address[1]])
-            stvars.records_temp.remove(stvars.records_temp[data_address[1]])
-            log_msg("1 record was committed to memory.", popup=False)
+        row = 0
+        iter8 = 0
+        invalid8 = 0
+        while row < len(data_address[0]):
+            if data_address[0][row] == "Temporary":
+                # Change the status of the record to "Saved":
+                # Notes: The next code line raises a warning in PyCharm, but it isn't an error.
+                # * The problem stems from PyCharm not recognizing that 'stvars.records_temp[data_address[1][row]]'
+                # * refers to a dictionary, not a list. It's not a big deal, but I thought I should mention it in case
+                # *someone takes over the code, tries to fix it, and breaks the program. Don't fix it. It's not broken.
+                stvars.records_temp[data_address[1][row]]["Status"] = "Saved"
+                # Add the record to the saved records list:
+                stvars.records_saved.append(stvars.records_temp[data_address[1][row]])
+                # Count successes:
+                iter8 += 1
+            elif data_address[0][row] == "Deleted":
+                # Check for validation errors:
+                if "" in stvars.records_deleted[data_address[1][row]].values():
+                    # Change the status of the record to "Invalid":
+                    # * See the 'Notes' above for why this raises a warning in PyCharm.
+                    stvars.records_deleted[data_address[1][row]]["Status"] = "Invalid"
+                    # Add the record to the invalid record list:
+                    stvars.records_invalid.append(
+                        stvars.records_deleted[data_address[1][row]]
+                    )
+                    # Count invalid successes:
+                    invalid8 += 1
+                else:
+                    # Change the status of the record to "Saved":
+                    # * See the 'Notes' above for why this raises a warning in PyCharm.
+                    stvars.records_deleted[data_address[1][row]]["Status"] = "Saved"
+                    # Add the record to the saved records list:
+                    stvars.records_saved.append(
+                        stvars.records_deleted[data_address[1][row]]
+                    )
+                    # Count successes:
+                    iter8 += 1
+            row += 1
+        # Remove each record from its previous record list from the bottom up:
+        # * This can't be done top down because it will modify the indeces of lower records.
+        row = len(data_address[0]) - 1
+        while row >= 0:
+            if data_address[0][row] == "Temporary":
+                # Remove from the temp records list:
+                stvars.records_temp.remove(stvars.records_temp[data_address[1][row]])
+            elif data_address[0][row] == "Deleted":
+                # Remove from the deleted records list:
+                stvars.records_deleted.remove(
+                    stvars.records_deleted[data_address[1][row]]
+                )
+            row -= 1
+        if (iter8 > 0) or (invalid8 > 0):
+            # Only refresh the table if changes were made:
             refresh_table(repop_tree=True)
-            base_tree.selection_set(base_tree.get_children()[data_address[2]])
-            base_tree.focus(base_tree.get_children()[data_address[2]])
-
-
-# Document: Add docstring and topline comments.
-# ? See the documentation comments on 'commit_selection()' for why this function's documentation is pending.
-def delete_selection():
-    data_address = get_selection(stop_select=True)
-    if data_address is not None:
-        if data_address[0] == "Saved":
-            # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-            stvars.records_saved[data_address[1]]["Status"] = "Deleted"
-            stvars.records_deleted.append(stvars.records_saved[data_address[1]])
-            stvars.records_saved.remove(stvars.records_saved[data_address[1]])
-            log_msg("1 record was deleted.", popup=False)
-            refresh_table(repop_tree=True)
-        if data_address[0] == "Invalid":
-            # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-            stvars.records_invalid[data_address[1]]["Status"] = "Deleted"
-            stvars.records_deleted.append(stvars.records_invalid[data_address[1]])
-            stvars.records_invalid.remove(stvars.records_invalid[data_address[1]])
-            log_msg("1 record was deleted from memory.", popup=False)
-            refresh_table(repop_tree=True)
-        base_tree.selection_set(base_tree.get_children()[data_address[2]])
-        base_tree.focus(base_tree.get_children()[data_address[2]])
+            # Print a customized Datalog message for each combination of valid and invalid records:
+            if (iter8 > 0) and (invalid8 > 0):
+                if (iter8 > 1) and (invalid8 > 1):
+                    log_msg(
+                        str(iter8)
+                        + " valid records and "
+                        + str(invalid8)
+                        + " invalid records were stored in memory.",
+                        popup=False,
+                    )
+                elif (iter8 > 1) and (invalid8 == 1):
+                    log_msg(
+                        str(iter8)
+                        + " valid records and 1 invalid record were stored in memory.",
+                        popup=False,
+                    )
+                else:
+                    log_msg(
+                        "1 valid record and "
+                        + str(invalid8)
+                        + " invalid records were stored in memory.",
+                        popup=False,
+                    )
+            elif (iter8 > 1) and (invalid8 == 0):
+                log_msg(
+                    str(iter8) + " valid records were stored in memory.", popup=False
+                )
+            elif (iter8 == 0) and (invalid8 > 1):
+                log_msg(
+                    str(invalid8) + " invalid records were stored in memory.",
+                    popup=False,
+                )
+            elif (iter8 == 1) and (invalid8 == 0):
+                log_msg("1 valid record was stored in memory.", popup=False)
+            else:
+                log_msg("1 invalid record was stored in memory.", popup=False)
+            row = 0
+            while row < len(data_address[2]):
+                # Since performing this operation deselects the rows, reselect them:
+                base_tree.selection_add(base_tree.get_children()[data_address[2][row]])
+                row += 1
+            # Refocus the cursor on the topmost record:
+            base_tree.focus(base_tree.get_children()[data_address[2][0]])
 
 
 # Updated: All good for now.
-def disable_resize(event):
+def disable_resize_cursor(event):
     """
-    Prevents manual resizing of table column headers and its associated mouse graphic by interrupting the default
-    behavior of left-clicking and mouse motion when the mouse is positioned over a column separator.
+    Prevents the resizing cursor graphic by interrupting the default behavior of mouse motion when the mouse is
+    positioned over a column separator.
 
     Args:
-        event (tkinter.Event): A standard tkinter keybinding event. In this case, it is either '<Button-1>' (left-click)
-            or '<Motion>' (mouse movement), but should not be manually declared.
+        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Motion>' (mouse movement), but
+        it should not be manually declared.
 
     Returns:
         str: This returns "break" back to the calling event, preventing it from performing its default behavior.
@@ -430,8 +504,8 @@ def export_file():
 # Updated: All good for now.
 def get_selection(stop_select: bool = False):
     """
-    Grabs the contents of the currently selected line in the viewport table and uses that information to locate the
-    record in its respective record list.
+    Grabs the contents of the currently selected lines in the viewport table and uses that information to locate the
+    records in their respective record lists.
 
     Args:
         stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the record's
@@ -445,125 +519,187 @@ def get_selection(stop_select: bool = False):
     """
     # Ensure that a record is selected at all:
     if len(base_tree.selection()) > 0:
-        # Initialize an empty list to store the location of the selected record:
-        data_address = list()
-        # Store the treeview index of the selected row, so it can be re-selected after a table refresh:
-        tree_index = base_tree.index(base_tree.selection()[0])
-        # Grab the list of column headers to use as key values:
+        # Create a series of lists to hold relevant information for locating records:
+        rec_status = [None] * len(base_tree.selection())
+        rec_index = [None] * len(base_tree.selection())
+        tree_index = [None] * len(base_tree.selection())
+        # Create a master list to hold the three lists from above:
+        select_data = [[] * len(base_tree.selection())] * 3
+        row = 0
+        while row < len(base_tree.selection()):
+            # Add the tree indeces of selected records to the corresponding list:
+            tree_index[row] = base_tree.index(base_tree.selection()[row])
+            row += 1
+        # Grab the list of column headers to use as dictionary keys:
         keys = list(base_tree["columns"])
-        # Grab the values displayed in the selected row:
-        values = base_tree.item(base_tree.selection()[0])["values"]
+        # Initialize an empty list for each record's values:
+        values = [None] * len(base_tree.selection())
+        row = 0
+        while row < len(base_tree.selection()):
+            # Store the records in the empty values list, one record at a time:
+            values[row] = base_tree.item(base_tree.selection()[row])["values"]
+            row += 1
+        # Initialize another empty list to store dictionaries for each record:
+        selection = [None] * len(base_tree.selection())
+        row = 0
+        while row < len(values):
+            # Build a dictionary using the keys and values from above:
+            selection[row] = dict(zip(keys, values[row]))
+            # Ensure "Timestamp" values are reformatted as timestamps (they're stored in Treeview as strings):
+            if "Timestamp" in selection[row]:
+                selection[row]["Timestamp"] = pd.Timestamp(selection[row]["Timestamp"])
+            # Ensure "Cost" values are reformatted as floats (they're stored in Treeveiw as strings):
+            if "Cost" in selection[row]:
+                if selection[row]["Cost"] != "":
+                    selection[row]["Cost"] = float(selection[row]["Cost"])
+            # Ensure "Total" values are reformatted as floats (they're stored in Treeveiw as strings):
+            if "Total" in selection[row]:
+                if selection[row]["Total"] != "":
+                    selection[row]["Total"] = float(selection[row]["Total"])
+            if selection[row]["Status"] == "Saved":
+                record = 0
+                iter8 = 0
+                while record < len(stvars.records_saved):
+                    # Compare the selected record to records in the saved records list:
+                    if selection[row] == stvars.records_saved[record]:
+                        # When a match is found, store the "Status" and record list index:
+                        rec_status[row] = selection[row]["Status"]
+                        rec_index[row] = record
+                    else:
+                        iter8 += 1
+                    record += 1
+                # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
+                if iter8 == len(stvars.records_saved):
+                    log_msg(
+                        "Something went wrong. A memory address for the selected record could not be found. Try "
+                        + "refreshing the table and then try again.",
+                        popup=True,
+                    )
+                    # Clear the selection whenever this happens, to prevent infinite looping of 'log_msg()':
+                    base_tree.selection_remove(base_tree.selection()[0])
+            elif selection[row]["Status"] == "Temporary":
+                record = 0
+                iter8 = 0
+                while record < len(stvars.records_temp):
+                    # Compare the selected record to records in the temp records list:
+                    if selection[row] == stvars.records_temp[record]:
+                        # When a match is found, store the "Status" and record list index:
+                        rec_status[row] = selection[row]["Status"]
+                        rec_index[row] = record
+                    else:
+                        iter8 += 1
+                    record += 1
+                # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
+                if iter8 == len(stvars.records_temp):
+                    log_msg(
+                        "Something went wrong. A memory address for the selected record could not be found. Try "
+                        + "refreshing the table and then try again.",
+                        popup=True,
+                    )
+                    # Clear the selection whenever this happens, to prevent infinite looping of 'log_msg()':
+                    base_tree.selection_remove(base_tree.selection()[0])
+            elif selection[row]["Status"] == "Invalid":
+                record = 0
+                iter8 = 0
+                while record < len(stvars.records_invalid):
+                    # Compare the selected record to records in the invalid records list:
+                    if selection[row] == stvars.records_invalid[record]:
+                        # When a match is found, store the "Status" and record list index:
+                        rec_status[row] = selection[row]["Status"]
+                        rec_index[row] = record
+                    else:
+                        iter8 += 1
+                    record += 1
+                # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
+                if iter8 == len(stvars.records_invalid):
+                    log_msg(
+                        "Something went wrong. A memory address for the selected record could not be found. Try "
+                        + "refreshing the table and then try again.",
+                        popup=True,
+                    )
+                    # Clear the selection whenever this happens, to prevent infinite looping of 'log_msg()':
+                    base_tree.selection_remove(base_tree.selection()[0])
+            elif selection[row]["Status"] == "Deleted":
+                record = 0
+                iter8 = 0
+                while record < len(stvars.records_deleted):
+                    # Compare the selected record to records in the deleted records list:
+                    if selection[row] == stvars.records_deleted[record]:
+                        # When a match is found, store the "Status" and record list index:
+                        rec_status[row] = selection[row]["Status"]
+                        rec_index[row] = record
+                    else:
+                        iter8 += 1
+                    record += 1
+                # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
+                if iter8 == len(stvars.records_deleted):
+                    log_msg(
+                        "Something went wrong. A memory address for the selected record could not be found. Try "
+                        + "refreshing the table and then try again.",
+                        popup=True,
+                    )
+                    # Clear the selection whenever this happens, to prevent infinite looping of 'log_msg()':
+                    base_tree.selection_remove(base_tree.selection()[0])
+            row += 1
+        # Store all of the collected data in the master info list:
+        select_data[0] = rec_status
+        select_data[1] = rec_index
+        select_data[2] = tree_index
         # If the record is going to be modified, deselect it in the treeview to prevent looping errors:
         if stop_select:
-            if len(base_tree.selection()) > 0:
+            while len(base_tree.selection()) > 0:
                 base_tree.selection_remove(base_tree.selection()[0])
-        # Initialize an empty dictionary to store the keys and values gathered above:
-        selection_dict = dict()
-        # Populate the empty dictionary with key-value pairs in the same format as found in the record list variables:
-        iter8 = 0
-        while iter8 < len(keys):
-            selection_dict[keys[iter8]] = values[iter8]
-            iter8 += 1
-        # Timestamp objects and float values are stored as strings in Treeview, so convert them to their original
-        # datatypes in the library:
-        if "Timestamp" in selection_dict:
-            selection_dict["Timestamp"] = pd.Timestamp(selection_dict["Timestamp"])
-        if "Cost" in selection_dict:
-            if selection_dict["Cost"] != "":
-                selection_dict["Cost"] = float(selection_dict["Cost"])
-        if "Total" in selection_dict:
-            if selection_dict["Total"] != "":
-                selection_dict["Total"] = float(selection_dict["Total"])
-        # If the record status is "Temporary", search the 'stvars.records_temp' list for a matching record:
-        if selection_dict["Status"] == "Temporary":
-            index = 0
-            iter8 = 0
-            while index < len(stvars.records_temp):
-                if selection_dict == stvars.records_temp[index]:
-                    # Store the "Temporary" status in the return list:
-                    data_address.append(selection_dict["Status"])
-                    # Store the 'stvars.records_temp' index of the matching record:
-                    data_address.append(index)
-                    # And store the 'tree_index' from earlier, for reselection purposes:
-                    data_address.append(tree_index)
-                else:
-                    # If the first record doesn't match, move on to the next, and so on, but store the number of
-                    # non-matching records:
-                    iter8 += 1
-                index += 1
-            # If the number of non-matching records matches the number of records, then no match was found:
-            if iter8 == len(stvars.records_temp):
-                # Display a messagebox and Datalog entry informing the user of the record error:
-                log_msg(
-                    msg="Something went wrong. A memory address for the selected record could not be found. Try "
-                    "refreshing the table and then try again.",
-                    popup=True,
-                )
-                # If an error does occur, deselect the selected row to prevent looping errors:
-                base_tree.selection_remove(base_tree.selection()[0])
-        # If the record status is "Saved", follow all the same steps from the "Temporary" option, but with the
-        # 'stvars.records_saved' lists instead:
-        elif selection_dict["Status"] == "Saved":
-            index = 0
-            iter8 = 0
-            while index < len(stvars.records_saved):
-                if selection_dict == stvars.records_saved[index]:
-                    data_address.append(selection_dict["Status"])
-                    data_address.append(index)
-                    data_address.append(tree_index)
-                else:
-                    iter8 += 1
-                index += 1
-            if iter8 == len(stvars.records_saved):
-                log_msg(
-                    msg="Something went wrong. A memory address for the selected record could not be found. Try "
-                    "refreshing the table and then try again.",
-                    popup=True,
-                )
-                base_tree.selection_remove(base_tree.selection()[0])
-        # If the record status is "Deleted", follow all the same steps from the "Temporary" option, but with the
-        # 'stvars.records_deleted' lists instead:
-        elif selection_dict["Status"] == "Deleted":
-            index = 0
-            iter8 = 0
-            while index < len(stvars.records_deleted):
-                if selection_dict == stvars.records_deleted[index]:
-                    data_address.append(selection_dict["Status"])
-                    data_address.append(index)
-                    data_address.append(tree_index)
-                else:
-                    iter8 += 1
-                index += 1
-            if iter8 == len(stvars.records_deleted):
-                log_msg(
-                    msg="Something went wrong. A memory address for the selected record could not be found. Try "
-                    "refreshing the table and then try again.",
-                    popup=True,
-                )
-                base_tree.selection_remove(base_tree.selection()[0])
-        # If the record status is "Invalid", follow all the same steps from the "Temporary" option, but with the
-        # 'stvars.records_invalid' lists instead:
-        elif selection_dict["Status"] == "Invalid":
-            index = 0
-            iter8 = 0
-            while index < len(stvars.records_invalid):
-                if selection_dict == stvars.records_invalid[index]:
-                    data_address.append(selection_dict["Status"])
-                    data_address.append(index)
-                    data_address.append(tree_index)
-                else:
-                    iter8 += 1
-                index += 1
-            if iter8 == len(stvars.records_invalid):
-                log_msg(
-                    msg="Something went wrong. A memory address for the selected record could not be found. Try "
-                    "refreshing the table and then try again.",
-                    popup=True,
-                )
-                base_tree.selection_remove(base_tree.selection()[0])
-        # As long as the record is found, pass its information back to the function that called for it:
-        if len(data_address) > 0:
-            return data_address
+        # As long as there were no writing errors, send the selection info back to the function that called for it:
+        if select_data[0] is not None:
+            return select_data
+
+
+# Updated: All good for now.
+def hide_toggle():
+    """
+    Used to set the appearance of toggle buttons used to hide records with a specific status.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    # Check to see if any filters or sorts are currently active:
+    if (
+        toggle_deleted.get()
+        or toggle_invalid.get()
+        or toggle_saved.get()
+        or toggle_temp.get()
+        or (stvars.sort_column != "")
+    ):
+        # If so, turn on the primary filter and sink its button:
+        stvars.filter_toggle = True
+        btn_filter.configure(relief="sunken")
+    else:
+        # If not, turn off the primary filter and raise its button:
+        stvars.filter_toggle = False
+        btn_filter.configure(relief="raised")
+    # Do the same with the "Hide Deleted" button:
+    if toggle_deleted.get():
+        btn_hide_deleted.configure(relief="sunken")
+    else:
+        btn_hide_deleted.configure(relief="raised")
+    # Do the same with the "Hide Invalid" button:
+    if toggle_invalid.get():
+        btn_hide_invalid.configure(relief="sunken")
+    else:
+        btn_hide_invalid.configure(relief="raised")
+    # Do the same with the "Hide Saved" button:
+    if toggle_saved.get():
+        btn_hide_saved.configure(relief="sunken")
+    else:
+        btn_hide_saved.configure(relief="raised")
+    # Do the same with the "Hide Temporary" button:
+    if toggle_temp.get():
+        btn_hide_temp.configure(relief="sunken")
+    else:
+        btn_hide_temp.configure(relief="raised")
+    # Refresh the table contents:
+    refresh_table()
 
 
 # Updated: All good for now.
@@ -647,9 +783,84 @@ def log_msg(msg: str = "This event is not functional yet.", popup: bool = True):
         messagebox.showinfo("Message", msg)
 
 
-# Placeholder:
-def pop_filter():
-    pass
+# Updated: All good for now.
+def pop_filter(clear: bool = False):
+    """
+    This populates the filtered record list based on active filters and sorting options, with optional stacking.
+    Alternatively, it can also clear the filtered record list, enforcing the use of the standard master list in
+    populating the viewport table instead.
+
+    Args:
+        clear (bool, optional): Set to True to bypass the use of filters and sorting. Defaults to False.
+    """
+    # Regardless of the value of 'clear', the record list needs to be emptied in order to refresh accurately:
+    while len(stvars.records_filter) > 0:
+        stvars.records_filter.remove(stvars.records_filter[0])
+    if not clear:
+        # In the case where 'clear' is False, add the contents of 'stvars.records_master', which should have already
+        # been sorted by timestamp prior to calling this function:
+        for record in stvars.records_master:
+            stvars.records_filter.append(record)
+        # If the "Hide Deleted" toggle is on, remove all deleted records from the filtered list:
+        # * This is performed from the bottom up to prevent indexing errors:
+        if toggle_deleted.get():
+            iter8 = len(stvars.records_filter) - 1
+            while iter8 >= 0:
+                if stvars.records_filter[iter8]["Status"] == "Deleted":
+                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                iter8 -= 1
+        # Remove invalid records if "Hide Invalid" is toggled on:
+        if toggle_invalid.get():
+            iter8 = len(stvars.records_filter) - 1
+            while iter8 >= 0:
+                if stvars.records_filter[iter8]["Status"] == "Invalid":
+                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                iter8 -= 1
+        # Remove saved records if "Hide Saved" is toggled on:
+        if toggle_saved.get():
+            iter8 = len(stvars.records_filter) - 1
+            while iter8 >= 0:
+                if stvars.records_filter[iter8]["Status"] == "Saved":
+                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                iter8 -= 1
+        # Remove temp records if "Hide Temporary" is toggled on:
+        if toggle_temp.get():
+            iter8 = len(stvars.records_filter) - 1
+            while iter8 >= 0:
+                if stvars.records_filter[iter8]["Status"] == "Temporary":
+                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                iter8 -= 1
+        if (stvars.sort_column != "") and (len(stvars.records_filter) > 0):
+            # If a sorting option is active, sort the filtered records using the chosen column:
+            # * The 'lambda' function in this prevents empty cells from throwing TypeErrors.
+            stvars.records_filter.sort(
+                key=lambda d: (d[stvars.sort_column] == "", d[stvars.sort_column]),
+                reverse=stvars.sort_descending,
+            )
+            # Sorting must also be applied to all of the component record lists to prevent indexing errors when
+            # modifying sorted records:
+            # * TypeErrors can only be raised by invalid records, so only the master filtered list and the invalid
+            # * record list need to account for them.
+            if len(stvars.records_deleted) > 0:
+                stvars.records_deleted[stvars.sort_column].sort(
+                    key=lambda d: d[stvars.sort_column], reverse=stvars.sort_descending
+                )
+            if len(stvars.records_invalid) > 0:
+                stvars.records_invalid.sort(
+                    key=lambda d: (d[stvars.sort_column] == "", d[stvars.sort_column]),
+                    reverse=stvars.sort_descending,
+                )
+            if len(stvars.records_saved) > 0:
+                stvars.records_saved.sort(
+                    key=lambda d: d[stvars.sort_column], reverse=stvars.sort_descending
+                )
+            if len(stvars.records_temp) > 0:
+                stvars.records_temp.sort(
+                    key=lambda d: d[stvars.sort_column], reverse=stvars.sort_descending
+                )
+        # In the case where all records have been filtered out of the table, create a single record informing the user:
+        if len(stvars.records_filter) == 0:
+            stvars.records_filter.append({"Status": "All Records Hidden"})
 
 
 # Updated: All good for now.
@@ -668,18 +879,34 @@ def pop_master(send_log: bool = False):
     while len(stvars.records_master) > 0:
         # Empty the contents of 'stvars.records_master' first:
         stvars.records_master.remove(stvars.records_master[0])
+    # Ensure that 'stvars.records_deleted' is sorted by timestamp before importing its contents:
+    if len(stvars.records_deleted) > 0:
+        if "Timestamp" in stvars.records_deleted[0]:
+            stvars.records_deleted.sort(key=lambda d: d["Timestamp"], reverse=False)
     for record in stvars.records_deleted:
         # Next, add the entire contents of 'stvars.records_deleted' to the empty 'stvars.records_master':
         stvars.records_master.append(record)
         # Keep track of the number of records added to 'stvars.records_master' from this list:
         iter8 += 1
+    # Ensure that 'stvars.records_invalid' is sorted by timestamp before importing its contents:
+    if len(stvars.records_invalid) > 0:
+        if "Timestamp" in stvars.records_invalid[0]:
+            stvars.records_invalid.sort(key=lambda d: d["Timestamp"], reverse=False)
     for record in stvars.records_invalid:
         # Do the same for the other three lists:
         stvars.records_master.append(record)
         iter8 += 1
+    # Ensure that 'stvars.records_saved' is sorted by timestamp before importing its contents:
+    if len(stvars.records_saved) > 0:
+        if "Timestamp" in stvars.records_saved[0]:
+            stvars.records_saved.sort(key=lambda d: d["Timestamp"], reverse=False)
     for record in stvars.records_saved:
         stvars.records_master.append(record)
         iter8 += 1
+    # Ensure that 'stvars.records_temp' is sorted by timestamp before importing its contents:
+    if len(stvars.records_temp) > 0:
+        if "Timestamp" in stvars.records_temp[0]:
+            stvars.records_temp.sort(key=lambda d: d["Timestamp"], reverse=False)
     for record in stvars.records_temp:
         stvars.records_master.append(record)
         iter8 += 1
@@ -714,6 +941,8 @@ def pop_master(send_log: bool = False):
             btn_commit_a.config(state="disabled")
             btn_reject_a.config(state="disabled")
             btn_hide_temp.config(state="disabled")
+            root.unbind(sequence="<Return>")
+            root.unbind(sequence="<Delete>")
             root.unbind(sequence="<Shift-Return>")
             root.unbind(sequence="<Shift-Delete>")
         # Only enable data export menu option and shortcut button if there is at least one "Saved" record:
@@ -919,8 +1148,11 @@ def refresh_table(repop_tree: bool = True, master_log: bool = False):
         pop_master(send_log=True)
     else:
         pop_master()
-    # Refresh the contents of 'stvars.records_filter' using updated 'stvars.records_master' data:
-    pop_filter()
+    if (stvars.filter_toggle) or (stvars.sort_column != ""):
+        # Refresh the contents of 'stvars.records_filter' if any filters or sorts are toggled on:
+        pop_filter()
+    else:
+        pop_filter(clear=True)
     if repop_tree:
         # Repopulate the viewport table with data:
         pop_table()
@@ -932,7 +1164,7 @@ def refresh_table(repop_tree: bool = True, master_log: bool = False):
 # Updated: All good for now.
 def reject_all():
     """
-    Permanently removes all temporary records from the program.
+    Rejects all temporary records in one batch action.
 
     Args: None
     Raises: None
@@ -945,53 +1177,101 @@ def reject_all():
             base_tree.selection_remove(base_tree.selection()[0])
         iter8 = 0
         while len(stvars.records_temp) > 0:
-            # Remove all records from the temp list:
+            # Change the status of each record:
+            stvars.records_temp[0]["Status"] = "Deleted"
+            # Add the record to the end of the deleted records list:
+            stvars.records_deleted.append(stvars.records_temp[0])
+            # Remove the record from the temp list:
             stvars.records_temp.remove(stvars.records_temp[0])
             iter8 += 1
         if iter8 > 0:
+            # Sort all deleted records by timestamp:
+            if "Timestamp" in stvars.records_deleted[0].keys():
+                stvars.records_deleted.sort(key=lambda d: d["Timestamp"], reverse=False)
             # Pass a message to the Datalog if changes were made:
             log_msg(msg=(str(iter8) + " records were cleared from memory."))
             # Then refresh the table and have the master list pass its own message to the Datalog:
             refresh_table(master_log=True)
 
 
-# Document: Add docstring and topline comments.
-# ? See the 'Document' comment on 'commit_selection()' for why this function's documentation is pending.
+# Updated: All good for now.
 def reject_selection():
+    """
+    Deletes the selected temp, saved, and invalid records, excluding them from export. Supports single and multiple
+    selections.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    # Send a call to 'get_selection()' for data on the currently selected Treeview rows:
     data_address = get_selection(stop_select=True)
+    # Only proceed if valid information was returned:
     if data_address is not None:
-        if data_address[0] == "Temporary":
-            stvars.records_temp.remove(stvars.records_temp[data_address[1]])
-            log_msg("1 record was cleared from memory.", popup=False)
+        row = 0
+        iter8 = 0
+        while row < len(data_address[0]):
+            # Compare the data from 'get_selection()' with the records in the saved records list:
+            if data_address[0][row] == "Saved":
+                # Modify the status to "Deleted":
+                # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
+                stvars.records_saved[data_address[1][row]]["Status"] = "Deleted"
+                # Add the record to the deleted records list:
+                stvars.records_deleted.append(
+                    stvars.records_saved[data_address[1][row]]
+                )
+                # Record successes:
+                iter8 += 1
+            elif data_address[0][row] == "Temporary":
+                # Modify the status to "Deleted":
+                # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
+                stvars.records_temp[data_address[1][row]]["Status"] = "Deleted"
+                # Add the record to the deleted records list:
+                stvars.records_deleted.append(stvars.records_temp[data_address[1][row]])
+                # Record successes:
+                iter8 += 1
+            elif data_address[0][row] == "Invalid":
+                # Modify the status to "Deleted":
+                # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
+                stvars.records_invalid[data_address[1][row]]["Status"] = "Deleted"
+                # Add the record to the deleted records list:
+                stvars.records_deleted.append(
+                    stvars.records_invalid[data_address[1][row]]
+                )
+                # Record successes:
+                iter8 += 1
+            row += 1
+        # Remove each record from its previous record list from the bottom up:
+        # * This can't be done top down because it will modify the indeces of lower records.
+        row = len(data_address[0]) - 1
+        while row >= 0:
+            if data_address[0][row] == "Saved":
+                # Remove record from the saved records list:
+                stvars.records_saved.remove(stvars.records_saved[data_address[1][row]])
+            elif data_address[0][row] == "Temporary":
+                # Remove record from the temp records list:
+                stvars.records_temp.remove(stvars.records_temp[data_address[1][row]])
+            elif data_address[0][row] == "Invalid":
+                # Remove record from the invalid records list:
+                stvars.records_invalid.remove(
+                    stvars.records_invalid[data_address[1][row]]
+                )
+            row -= 1
+        if iter8 > 0:
+            # Only refresh the table if changes were made:
             refresh_table(repop_tree=True)
-            base_tree.selection_set(base_tree.get_children()[data_address[2]])
-            base_tree.focus(base_tree.get_children()[data_address[2]])
-
-
-# Document: Add docstring and topline comments.
-# ? See the 'Document' comment on 'commit_selection()' for why this function's documentation is pending.
-def restore_selection():
-    data_address = get_selection(stop_select=True)
-    if data_address is not None:
-        if data_address[0] == "Deleted":
-            if "" in stvars.records_deleted[data_address[1]].values():
-                # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-                stvars.records_deleted[data_address[1]]["Status"] = "Invalid"
-                stvars.records_invalid.append(stvars.records_deleted[data_address[1]])
-                stvars.records_deleted.remove(stvars.records_deleted[data_address[1]])
-                log_msg("1 invalid record was restored to memory.", popup=False)
-                refresh_table(repop_tree=True)
-                base_tree.selection_set(base_tree.get_children()[data_address[2]])
-                base_tree.focus(base_tree.get_children()[data_address[2]])
+            # Print the correct Datalog message for records (either singular or plural):
+            if iter8 > 1:
+                log_msg(str(iter8) + " records were removed from memory.", popup=False)
             else:
-                # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-                stvars.records_deleted[data_address[1]]["Status"] = "Saved"
-                stvars.records_saved.append(stvars.records_deleted[data_address[1]])
-                stvars.records_deleted.remove(stvars.records_deleted[data_address[1]])
-                log_msg("1 record was restored to memory.", popup=False)
-                refresh_table(repop_tree=True)
-                base_tree.selection_set(base_tree.get_children()[data_address[2]])
-                base_tree.focus(base_tree.get_children()[data_address[2]])
+                log_msg("1 record was removed from memory.", popup=False)
+            row = 0
+            while row < len(data_address[2]):
+                # Since performing this operation deselects the rows, reselect them:
+                base_tree.selection_add(base_tree.get_children()[data_address[2][row]])
+                row += 1
+            # Refocus the cursor on the topmost record:
+            base_tree.focus(base_tree.get_children()[data_address[2][0]])
 
 
 # Updated: All good for now.
@@ -1004,6 +1284,11 @@ def root_update():
     Raises: None
     Returns: None
     """
+    # Set the "Toggle Filter..." button to the correct state depending on the value of 'stvars.filter_toggle':
+    if (stvars.filter_toggle) and (btn_filter.cget("relief") == "raised"):
+        btn_filter.configure(relief="sunken")
+    elif (not stvars.filter_toggle) and (btn_filter.cget("relief") == "sunken"):
+        btn_filter.configure(relief="raised")
     # Toggle on the menu options and shortcut buttons associated with the record status of the selected row:
     if len(base_tree.selection()) > 0:
         select_toggle(state=True)
@@ -1101,7 +1386,64 @@ def select_toggle(state: bool):
         data_address = get_selection(stop_select=False)
         # If the request comes back with no data, stop:
         if data_address is not None:
-            if data_address[0] == "Temporary":
+            # Add keybindings for selection-based edits:
+            # * 'event' must be declared but *not* used here, or else it would need to be declared in the functions,
+            # * despite not being used there, either. It's just a quirk of 'tkinter' keybinding, apparently.
+            root.bind(sequence="<Return>", func=lambda event: commit_selection())
+            root.bind(sequence="<Delete>", func=lambda event: reject_selection())
+            if ("Saved" in data_address[0]) or ("Invalid" in data_address[0]):
+                # When a saved or invalid record is selected, enable events relating to individual saved and invalid
+                # records and disable those that only act on other record statuses:
+                if (
+                    edit_menu.entrycget("Reject Selection", option="state")
+                    == "disabled"
+                ):
+                    edit_menu.entryconfig("Reject Selection", state="normal")
+                btn_reject_s.config(state="normal")
+                if ("Deleted" not in data_address[0]) and (
+                    "Temporary" not in data_address[0]
+                ):
+                    if (
+                        edit_menu.entrycget("Commit Selection", option="state")
+                        == "normal"
+                    ):
+                        edit_menu.entryconfig("Commit Selection", state="disabled")
+                    btn_commit_s.config(state="disabled")
+                else:
+                    if (
+                        edit_menu.entrycget("Commit Selection", option="state")
+                        == "disabled"
+                    ):
+                        edit_menu.entryconfig("Commit Selection", state="normal")
+                    btn_commit_s.config(state="normal")
+            if "Deleted" in data_address[0]:
+                # When a deleted record is selected, enable events relating to individual deleted records and disable
+                # those that only act on other record statuses:
+                if (
+                    edit_menu.entrycget("Commit Selection", option="state")
+                    == "disabled"
+                ):
+                    edit_menu.entryconfig("Commit Selection", state="normal")
+                btn_commit_s.config(state="normal")
+                if (
+                    ("Saved" not in data_address[0])
+                    and ("Invalid" not in data_address[0])
+                    and ("Temporary" not in data_address[0])
+                ):
+                    if (
+                        edit_menu.entrycget("Reject Selection", option="state")
+                        == "normal"
+                    ):
+                        edit_menu.entryconfig("Reject Selection", state="disabled")
+                    btn_reject_s.config(state="disabled")
+                else:
+                    if (
+                        edit_menu.entrycget("Reject Selection", option="state")
+                        == "disabled"
+                    ):
+                        edit_menu.entryconfig("Reject Selection", state="normal")
+                    btn_reject_s.config(state="normal")
+            if "Temporary" in data_address[0]:
                 # When a temp record is selected, enable events relating to individual temp records and disable those
                 # that only act on other record statuses:
                 if (
@@ -1116,61 +1458,6 @@ def select_toggle(state: bool):
                 ):
                     edit_menu.entryconfig("Reject Selection", state="normal")
                 btn_reject_s.config(state="normal")
-                if edit_menu.entrycget("Delete Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Delete Selection", state="disabled")
-                btn_delete.config(state="disabled")
-                if edit_menu.entrycget("Restore Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Restore Selection", state="disabled")
-                btn_restore.config(state="disabled")
-                # Reset keybindings that act on other record statuses and replace with relevant keybindings:
-                root.unbind(sequence="<Return>")
-                root.unbind(sequence="<Delete>")
-                root.bind(sequence="<Return>", func=lambda event: commit_selection())
-                root.bind(sequence="<Delete>", func=lambda event: reject_selection())
-            elif (data_address[0] == "Saved") or (data_address[0] == "Invalid"):
-                # When a saved or invalid record is selected, enable events relating to individual saved and invalid
-                # records and disable those that only act on other record statuses:
-                if edit_menu.entrycget("Commit Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Commit Selection", state="disabled")
-                btn_commit_s.config(state="disabled")
-                if edit_menu.entrycget("Reject Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Reject Selection", state="disabled")
-                btn_reject_s.config(state="disabled")
-                if (
-                    edit_menu.entrycget("Delete Selection", option="state")
-                    == "disabled"
-                ):
-                    edit_menu.entryconfig("Delete Selection", state="normal")
-                btn_delete.config(state="normal")
-                if edit_menu.entrycget("Restore Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Restore Selection", state="disabled")
-                btn_restore.config(state="disabled")
-                # Reset keybindings that act on other record statuses and replace with relevant keybindings:
-                root.unbind(sequence="<Return>")
-                root.unbind(sequence="<Delete>")
-                root.bind(sequence="<Delete>", func=lambda event: delete_selection())
-            elif data_address[0] == "Deleted":
-                # When a deleted record is selected, enable events relating to individual deleted records and disable
-                # those that only act on other record statuses:
-                if edit_menu.entrycget("Commit Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Commit Selection", state="disabled")
-                btn_commit_s.config(state="disabled")
-                if edit_menu.entrycget("Reject Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Reject Selection", state="disabled")
-                btn_reject_s.config(state="disabled")
-                if edit_menu.entrycget("Delete Selection", option="state") == "normal":
-                    edit_menu.entryconfig("Delete Selection", state="disabled")
-                btn_delete.config(state="disabled")
-                if (
-                    edit_menu.entrycget("Restore Selection", option="state")
-                    == "disabled"
-                ):
-                    edit_menu.entryconfig("Restore Selection", state="normal")
-                btn_restore.config(state="normal")
-                # Reset keybindings that act on other record statuses and replace with relevant keybindings:
-                root.unbind(sequence="<Return>")
-                root.unbind(sequence="<Delete>")
-                root.bind(sequence="<Return>", func=lambda event: restore_selection())
     else:
         # If there is no selected row, disable all events and keybindings that act on individual records:
         if edit_menu.entrycget("Commit Selection", option="state") == "normal":
@@ -1179,12 +1466,6 @@ def select_toggle(state: bool):
         if edit_menu.entrycget("Reject Selection", option="state") == "normal":
             edit_menu.entryconfig("Reject Selection", state="disabled")
         btn_reject_s.config(state="disabled")
-        if edit_menu.entrycget("Delete Selection", option="state") == "normal":
-            edit_menu.entryconfig("Delete Selection", state="disabled")
-        btn_delete.config(state="disabled")
-        if edit_menu.entrycget("Restore Selection", option="state") == "normal":
-            edit_menu.entryconfig("Restore Selection", state="disabled")
-        btn_restore.config(state="disabled")
         root.unbind(sequence="<Return>")
         root.unbind(sequence="<Delete>")
 
@@ -1206,6 +1487,74 @@ def toggle_datalog(state: bool = False):
     else:
         # Hide the Datalog window:
         datalog.withdraw()
+
+
+# Updated: All good for now.
+def toggle_filter():
+    """
+    This turns off all active filters and toggles when the user invokes it.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    # Only do something if the filter toggle is already on:
+    if stvars.filter_toggle:
+        # Turn off the "Hide Deleted" toggle if it is on:
+        if toggle_deleted.get():
+            btn_hide_deleted.invoke()
+        # Turn off the "Hide Invalid" toggle if it is on:
+        if toggle_invalid.get():
+            btn_hide_invalid.invoke()
+        # Turn off the "Hide Saved" toggle if it is on:
+        if toggle_saved.get():
+            btn_hide_saved.invoke()
+        # Turn off the "Hide Temporary" toggle if it is on:
+        if toggle_temp.get():
+            btn_hide_temp.invoke()
+        # Clear the sorting variables:
+        stvars.sort_column = str()
+        stvars.sort_descending = True
+        # Turn off the filter toggle itself:
+        stvars.filter_toggle = False
+        # Refresh the table contents using default sorting in the master records list:
+        refresh_table()
+
+
+# Updated: All good for now.
+def tree_click(event):
+    """
+    This determines which area of the Treeview object was clicked to determine which action it takes. If a separator was
+    clicked, do nothing. If a column header was clicked, sort the contents of the tree based the column header.
+
+    Args:
+        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Button-1>' (mouse left-click), but
+        it should not be manually declared.
+
+    Returns:
+        str: This returns "break" back to the calling event, preventing it from performing its default behavior.
+    """
+    # Prevent column resizing by intercepting clicks on column separators:
+    if base_tree.identify_region(event.x, event.y) == "separator":
+        return "break"
+    # If a column header was clicked, gather more information:
+    elif base_tree.identify_region(event.x, event.y) == "heading":
+        # Get the index of the column header clicked:
+        heading = int(base_tree.identify_column(x=event.x)[1:]) - 1
+        # Turn the gathered index into its actual text (for dictionary key comparisons):
+        heading = base_tree["columns"][heading]
+        # Only sort descending if the column is already sorted ascending:
+        if (not stvars.sort_descending) and (stvars.sort_column == heading):
+            stvars.sort_descending = True
+        # Otherwise, sort ascending first:
+        else:
+            stvars.sort_descending = False
+        # Store the gathered heading in a persistent variable:
+        stvars.sort_column = heading
+        # Turn on the filter toggle variable:
+        stvars.filter_toggle = True
+        # Refresh the contents of the table:
+        refresh_table()
 
 
 # Updated: All good for now.
@@ -1243,32 +1592,6 @@ def validate_temp():
             record["Date"] = record["Date"] + record["Time"]
             # Now delete the 'Time' column:
             del record["Time"]
-        # Ensure timestamps are not fractional by rounding to the nearest second ("freq='min'" for minute rounding):
-        # * This *shouldn't* be necessary, but occasionally, timestamps are imported with additional milliseconds that
-        # * aren't in the source document. It appears to occur when datetime values are auto-populated by Excel rather
-        # * than having been manually entered. Note that this error is exclusive to Excel sheets, and does not occur in
-        # * in CSV or ODS documents.
-        if "Date" in record.keys():
-            record["Date"] = pd.Timestamp(record["Date"]).round(freq="s")
-        elif "Timestamp" in record.keys():
-            record["Timestamp"] = pd.Timestamp(record["Timestamp"]).round(freq="s")
-        # Ensure both currency fields are rounded to the nearest cent:
-        # * Again, this *shouldn't* be necessary, but 'Net Total' occasionally has bits flipped that shouldn't be.
-        # * This also appears to be a result of calculation errors in Excel, as it only happens in cells that either
-        # * contain formulas or had their contents auto-filled with data in the source Excel document. And again, this
-        # * doesn't happen at all in CSV or ODS documents--only in Excel.
-        if "Cost" in record.keys():
-            if type(record["Cost"]) != str:
-                record["Cost"] = round(record["Cost"], 2)
-        elif "Unit Cost" in record.keys():
-            if type(record["Unit Cost"]) != str:
-                record["Unit Cost"] = round(record["Unit Cost"], 2)
-        if "Total" in record.keys():
-            if type(record["Total"]) != str:
-                record["Total"] = round(record["Total"], 2)
-        elif "Net Total" in record.keys():
-            if type(record["Net Total"]) != str:
-                record["Net Total"] = round(record["Net Total"], 2)
     # If a 'Date' column exists, rename it to 'Timestamp' for later referencing. Since dictionary keys can't be
     # renamed without reordering them, do this through a DataFrame instead. Inefficient, yes, but it works with only
     # three lines instead of thirty for manual renaming and reordering.
@@ -1362,6 +1685,27 @@ def validate_temp():
             data_loaded = data_loaded.rename({item: "Total"}, axis="columns")
             # Now turn it back into a dictionary list, since it doesn't need to be a DataFrame anymore.
             data_loaded = data_loaded.to_dict(orient="records")
+    for record in data_loaded:
+        # Ensure timestamps are not fractional by rounding to the nearest second ("freq='min'" for minute rounding):
+        # * This *shouldn't* be necessary, but occasionally, timestamps are imported with additional milliseconds that
+        # * aren't in the source document. It appears to occur when datetime values are auto-populated by Excel rather
+        # * than having been manually entered. Note that this error is exclusive to Excel sheets, and does not occur in
+        # * in CSV or ODS documents.
+        if "Date" in record.keys():
+            record["Date"] = pd.Timestamp(record["Date"]).round(freq="s")
+        elif "Timestamp" in record.keys():
+            record["Timestamp"] = pd.Timestamp(record["Timestamp"]).round(freq="s")
+        # Ensure both currency fields are rounded to the nearest cent:
+        # * Again, this *shouldn't* be necessary, but 'Net Total' occasionally has bits flipped that shouldn't be.
+        # * This also appears to be a result of calculation errors in Excel, as it only happens in cells that either
+        # * contain formulas or had their contents auto-filled with data in the source Excel document. And again, this
+        # * doesn't happen at all in CSV or ODS documents--only in Excel.
+        if "Cost" in record.keys():
+            if type(record["Cost"]) != str:
+                record["Cost"] = round(record["Cost"], 2)
+        if "Total" in record.keys():
+            if type(record["Total"]) != str:
+                record["Total"] = round(record["Total"], 2)
     # Ensure the data is sorted by timestamp, from oldest to most recent:
     # * Note that 'reverse' defaults to False, so this isn't actually needed, but I'm leaving it there anyway.
     if "Timestamp" in data_loaded[0].keys():
@@ -1401,30 +1745,51 @@ def validate_temp():
     iter8 = 0
     invalid8 = 0
     while len(data_loaded) > 0:
+        # If records contain empty cells, place them in the invalid records list:
         if "" in data_loaded[0].values():
             data_loaded[0]["Status"] = "Invalid"
             stvars.records_invalid.append(data_loaded[0])
             data_loaded.remove(data_loaded[0])
-            # Count the number of successful record imports:
+            # Count the number of invalid record imports:
             invalid8 += 1
+        # Otherwise, add them to the temp records list:
         else:
             stvars.records_temp.append(data_loaded[0])
             data_loaded.remove(data_loaded[0])
             # Count the number of successful record imports:
             iter8 += 1
-    if iter8 > 0:
-        # Send the success count to the Datalog along with a popup.
-        log_msg(msg=(str(iter8) + " records were successfully imported."))
-    if invalid8 > 0:
-        # Send the success count to the Datalog along with a popup.
-        log_msg(msg=(str(invalid8) + " invalid records were imported."))
+    # Send a grammatically correct count of successful and invalid records to the Datalog along with a popup:
+    if (iter8 > 0) or (invalid8 > 0):
+        if (iter8 > 1) and (invalid8 > 1):
+            log_msg(msg=(
+                str(iter8)
+                + " valid records and "
+                + str(invalid8)
+                + " invalid records were successfully imported."
+            ))
+        elif (iter8 > 1) and (invalid8 == 1):
+            log_msg(msg=(
+                str(iter8)
+                + " valid records and 1 invalid record were successfully imported."
+            ))
+        elif (iter8 == 1) and (invalid8 > 1):
+            log_msg(msg=(
+                "1 valid record and "
+                + str(invalid8)
+                + " invalid records were successfully imported."
+            ))
+        elif (iter8 == 1) and (invalid8 == 1):
+            log_msg(msg=("1 valid record and 1 invalid record were successfully imported."))
+        elif (iter8 > 1) and (invalid8 == 0):
+            log_msg(msg=(str(iter8) + " valid records were successfully imported."))
+        elif (iter8 == 1) and (invalid8 == 0):
+            log_msg(msg=("1 valid record was successfully imported."))
+        elif (iter8 == 0) and (invalid8 > 1):
+            log_msg(msg=(str(invalid8) + " invalid records were successfully imported."))
+        elif (iter8 == 0) and (invalid8 == 1):
+            log_msg(msg=("1 invalid record was successfully imported."))
     # Refresh the viewport table and log the number of records currently loaded.
     refresh_table(master_log=True)
-
-
-# Placeholder:
-def view_temp():
-    pass
 
 
 # Incomplete: See "Task" comment in function body for details.
@@ -1509,13 +1874,6 @@ edit_menu.add_command(
     label="Reject Selection", state="disabled", command=reject_selection
 )
 edit_menu.add_command(label="Reject All", state="disabled", command=reject_all)
-edit_menu.add_separator()
-edit_menu.add_command(
-    label="Delete Selection", state="disabled", command=delete_selection
-)
-edit_menu.add_command(
-    label="Restore Selection", state="disabled", command=restore_selection
-)
 # Finalize the contents of the "Edit" menu:
 menu_bar.add_cascade(label="Edit", menu=edit_menu)
 # Define the "View Menu" and its commands:
@@ -1526,7 +1884,7 @@ view_menu.add_checkbutton(
     offvalue=0,
     onvalue=1,
     variable=toggle_saved,
-    command=log_msg,
+    command=hide_toggle,
 )
 view_menu.add_checkbutton(
     label="Hide Temporary Records",
@@ -1534,7 +1892,7 @@ view_menu.add_checkbutton(
     offvalue=0,
     onvalue=1,
     variable=toggle_temp,
-    command=log_msg,
+    command=hide_toggle,
 )
 view_menu.add_checkbutton(
     label="Hide Invalid Records",
@@ -1542,7 +1900,7 @@ view_menu.add_checkbutton(
     onvalue=1,
     variable=toggle_invalid,
     state="disabled",
-    command=log_msg,
+    command=hide_toggle,
 )
 view_menu.add_checkbutton(
     label="Hide Deleted Records",
@@ -1550,14 +1908,18 @@ view_menu.add_checkbutton(
     onvalue=1,
     variable=toggle_deleted,
     state="disabled",
-    command=log_msg,
+    command=hide_toggle,
 )
 view_menu.add_separator()
 view_menu.add_command(label="Open Datalog Window", command=lambda: toggle_datalog(True))
 view_menu.add_command(label="Save Datalog Contents", state="disabled", command=save_log)
 view_menu.add_separator()
 view_menu.add_checkbutton(
-    label="Toggle Filter...", offvalue=0, onvalue=1, state="disabled", command=log_msg
+    label="Toggle Filter...",
+    offvalue=0,
+    onvalue=1,
+    state="disabled",
+    command=toggle_filter,
 )
 # Finalize the contents of the "Edit" menu:
 menu_bar.add_cascade(label="View", menu=view_menu)
@@ -1595,8 +1957,6 @@ img_commit_s = ImageTk.PhotoImage(Image.open("Images/20/commit_selection.png"))
 img_commit_a = ImageTk.PhotoImage(Image.open("Images/20/commit_all.png"))
 img_reject_s = ImageTk.PhotoImage(Image.open("Images/20/reject_selection.png"))
 img_reject_a = ImageTk.PhotoImage(Image.open("Images/20/reject_all.png"))
-img_delete = ImageTk.PhotoImage(Image.open("Images/20/delete_selection.png"))
-img_restore = ImageTk.PhotoImage(Image.open("Images/20/restore_selection.png"))
 img_refresh = ImageTk.PhotoImage(Image.open("Images/20/refresh_view.png"))
 img_hide_saved = ImageTk.PhotoImage(Image.open("Images/20/hide_saved.png"))
 img_hide_temp = ImageTk.PhotoImage(Image.open("Images/20/hide_temp.png"))
@@ -1632,33 +1992,39 @@ btn_reject_s = tk.Button(
 btn_reject_a = tk.Button(
     shortcut_bar, image=img_reject_a, state="disabled", command=reject_all
 )
-btn_delete = tk.Button(
-    shortcut_bar, image=img_delete, state="disabled", command=delete_selection
-)
-btn_restore = tk.Button(
-    shortcut_bar, image=img_restore, state="disabled", command=restore_selection
-)
 btn_refresh = tk.Button(
     shortcut_bar, image=img_refresh, state="disabled", command=refresh_table
 )
 btn_hide_saved = tk.Button(
-    shortcut_bar, image=img_hide_saved, state="disabled", command=log_msg
+    shortcut_bar,
+    image=img_hide_saved,
+    state="disabled",
+    command=lambda: view_menu.invoke("Hide Saved Records"),
 )
 btn_hide_temp = tk.Button(
-    shortcut_bar, image=img_hide_temp, state="disabled", command=log_msg
+    shortcut_bar,
+    image=img_hide_temp,
+    state="disabled",
+    command=lambda: view_menu.invoke("Hide Temporary Records"),
 )
 btn_hide_invalid = tk.Button(
-    shortcut_bar, image=img_hide_invalid, state="disabled", command=log_msg
+    shortcut_bar,
+    image=img_hide_invalid,
+    state="disabled",
+    command=lambda: view_menu.invoke("Hide Invalid Records"),
 )
 btn_hide_deleted = tk.Button(
-    shortcut_bar, image=img_hide_deleted, state="disabled", command=log_msg
+    shortcut_bar,
+    image=img_hide_deleted,
+    state="disabled",
+    command=lambda: view_menu.invoke("Hide Deleted Records"),
+)
+btn_filter = tk.Button(
+    shortcut_bar, image=img_filter, state="disabled", command=toggle_filter
 )
 btn_employee = tk.Button(shortcut_bar, image=img_employee, command=log_msg)
 btn_location = tk.Button(shortcut_bar, image=img_location, command=log_msg)
 btn_category = tk.Button(shortcut_bar, image=img_category, command=log_msg)
-btn_filter = tk.Button(
-    shortcut_bar, image=img_filter, state="disabled", command=log_msg
-)
 btn_line = tk.Button(shortcut_bar, image=img_line, state="disabled", command=log_msg)
 btn_bar = tk.Button(shortcut_bar, image=img_bar, state="disabled", command=log_msg)
 btn_pie = tk.Button(shortcut_bar, image=img_pie, state="disabled", command=log_msg)
@@ -1667,7 +2033,7 @@ btn_help = tk.Button(shortcut_bar, image=img_help, command=log_msg)
 btn_logo = tk.Button(
     shortcut_bar,
     image=img_logo,
-    text="SalesTrax v0.1.0 ",
+    text="SalesTrax v0.1.2 ",
     font='"consolas" 12 italic bold',
     fg="gray",
     activebackground="black",
@@ -1685,8 +2051,6 @@ btn_commit_s.pack(side="left", padx=(8, 1), pady=2)
 btn_commit_a.pack(side="left", padx=1, pady=2)
 btn_reject_s.pack(side="left", padx=1, pady=2)
 btn_reject_a.pack(side="left", padx=1, pady=2)
-btn_delete.pack(side="left", padx=1, pady=2)
-btn_restore.pack(side="left", padx=(1, 8), pady=2)
 btn_refresh.pack(side="left", padx=(8, 1), pady=2)
 btn_hide_saved.pack(side="left", padx=1, pady=2)
 btn_hide_temp.pack(side="left", padx=1, pady=2)
@@ -1708,8 +2072,6 @@ ToolTip(btn_commit_s, msg="Commit Selection", delay=0.2, follow=True)
 ToolTip(btn_commit_a, msg="Commit All", delay=0.2, follow=True)
 ToolTip(btn_reject_s, msg="Reject Selection", delay=0.2, follow=True)
 ToolTip(btn_reject_a, msg="Reject All", delay=0.2, follow=True)
-ToolTip(btn_delete, msg="Delete Selection", delay=0.2, follow=True)
-ToolTip(btn_restore, msg="Restore Selection", delay=0.2, follow=True)
 ToolTip(btn_refresh, msg="Refresh Table", delay=0.2, follow=True)
 ToolTip(btn_hide_saved, msg="Hide Saved Records", delay=0.2, follow=True)
 ToolTip(btn_hide_temp, msg="Hide Temporary Records", delay=0.2, follow=True)
@@ -1730,7 +2092,7 @@ ToolTip(btn_logo, msg="SalesTrax on GitHub", delay=0.2, follow=True)
 # $ Try to find a way to include multiple selections in the 'get_selection()' function to support batch actions.
 # $ Once that is figured out, set 'selectmode="extended"' to allow multiple record selection.
 # Define the Treeview object:
-base_tree = ttk.Treeview(root, selectmode="browse")
+base_tree = ttk.Treeview(root, selectmode="extended")
 # Ensure that the default Treeview column takes up the entire Treeview area:
 base_tree.column("#0", width=(root.winfo_width() - 10))
 base_tree.heading("#0", text="", anchor="w")
@@ -1743,9 +2105,9 @@ scroll_tree.pack(side="right", fill="y")
 # Link the Treeview object's contents to the scrollbar:
 base_tree.configure(yscrollcommand=scroll_tree.set)
 # Disable manual column resizing by interrupting left-clicks when the mouse is positioned over a column separator:
-base_tree.bind("<Button-1>", func=disable_resize)
+base_tree.bind("<Button-1>", func=tree_click)
 # Also prevent the mouse from switching to the "resize" mouse image under the same circumstance:
-base_tree.bind("<Motion>", func=disable_resize)
+base_tree.bind("<Motion>", func=disable_resize_cursor)
 
 # Section: Status bar
 # Incomplete: Replace status bar content with something actually useful.

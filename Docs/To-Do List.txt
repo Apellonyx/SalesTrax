@@ -23,17 +23,7 @@ And lines beginning with "&" are fully unimplemented.
 #Alt: Link to GitHub Wiki instead. The "Help" menu list already includes this as an option.
 & This would require significantly less coding, resulting in a smaller file size.
 
-#Idea: Merge selection-based tasks into either one or two functions.
-& 'commitSelection()', 'deleteSelection()', and 'restoreSelection()' all move records from one list to another.
-& 'rejectSelection()' stands out from these, as it removes records entirely, so it should probably stay.
-#Alt: Change functionality of 'rejectSelection()' to NOT remove records, but rather delete them.
-& In this case, 'commitSelection()' and 'restoreSelection()' would merge into 'saveSelection()'.
-& And 'rejectSelection()' would be merged into 'deleteSelection()'.
-& The redundant buttons, menu options, etc. could then be removed, slimming down the program.
-*	This would also make the program less confusing to an onlooker, who wouldn't know the difference between
-*		rejecting and deleting a record. If they have the same functionality, there should only be one function.
-
-# Task: Create a question popup asking if the user wants ODS timestamps in string format or as an integer.
+#Task: Create a question popup asking if the user wants ODS timestamps in string format or as an integer.
 
 #Task: Create a new 'datalog' object and 'log_msg()' function to replace the existing 'message_box()'.
 ? It should log data regarding the following:
@@ -56,8 +46,6 @@ And lines beginning with "&" are fully unimplemented.
 ^		This text file is named 'datalog_' and appended with the timestamp of when it was created.
 ^ Also add 'save_log()' button.
 ^    'save_log()' would write the contents of the 'dataLog' to a plain text file and then clear the widget.
-
-#Task: Figure out how to perform modifications on multiple selected treeview items simultaneously.
 
 #Task: Add window for user-defined field validation lists.
 & There should only be one Toplevel object that populates itself depending on the validation list chosen.

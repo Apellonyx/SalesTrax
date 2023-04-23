@@ -1,4 +1,4 @@
-v0.1.0 2023-04-20:
+v0.1.1 2023-04-20:
 	- General Description:
 		This is the initial upload of the project, containing the first functional iteration of the SalesTrax program.
 	- New files:
@@ -67,3 +67,51 @@ v0.1.0 2023-04-20:
 				- 'sampleData (Central).xlsx'
 				- 'sampleData (Full).xlsx'
 				- 'testFile.xlsx'
+v0.1.2 2023-04-22:
+	- General description: Multiple selection enabled. Basic filtering by record status. Column sorting.
+	- Changes to 'main.py':
+		- Additions:
+			- Added functionality to the four "Hide *" buttons and their view menu checkbutton counterparts.
+				- Toggling an option from the shortcut bar will toggle it in the view menu as well, and vice versa.
+				- Toggling visually depresses the shortcut buttons for clarity regarding their toggle status.
+			- Added the following functions and their respective documentation:
+				- 'hide_toggle()'
+				- 'pop_filter()'
+				- 'tree_click()'
+			- Added the following persistent variables to 'stvars' class:
+				- 'filter_toggle': bool = False
+				- 'sort_column': str = ''
+				- 'sort_descending': bool = True
+		- Modifications and corrections:
+			- Corrected the Datalog message sent at the end of 'validate_temp()' to be grammatically correct while only
+				sending one combined message for both valid and invalid record reporting.
+			- Functionality of 'delete_selection()' and 'restore_selection()' functions was redirected to
+				'reject_selection()' and 'commit_selection()' respectively.
+			- Modified formatting of overly long lines throughout 'main.py' for readability (except comments).
+			- Modified 'refresh_table()' to account for filtering.
+			- Modified 'reject_all()' to delete records temporarily rather than permanently.
+			- Modified the "Review Temporary" button in 'commit_popup()' to use the new 'hide_toggle()' and
+				'toggle_filter()' functions.
+			- Modified the following functions and objects to handle multiple selection:
+				- 'base_tree'
+				- 'get_selection()'
+				- 'select_toggle()'
+				- 'commit_selection()'
+				- 'reject_selection()'
+			- Moved the section of 'validate_temp()' that rounds "Timestamp", "Cost", and "Total" columns to take place
+				after the columns have been renamed to program defaults (for conciseness).
+			- Moved the "Toggle Filter..." shortcut button to its correct place in the button definition list.
+			- Renamed 'disable_resize()' to 'disable_resize_cursor()' and moved the actual disabling of column resizing
+				into 'tree_click()'.
+			- Updated all instances of "v0.1.1" to "v0.1.2".
+			- Updated file header's "Description" to more accurately represent the current state of the program.
+		- Removals:
+			- Removed the 'delete_selection' and 'restore_selection' buttons and menu options.
+			- Removed 'view_temp()' placeholder function (replaced by 'hide_toggle()').
+		- Documentation Changes:
+			- Added function headers and/or topline comments to the following functions:
+				- 'commit_selection()'
+				- 'hide_toggle()'
+				- 'pop_filter()'
+				- 'reject_selection()'
+				- 'tree_click()'

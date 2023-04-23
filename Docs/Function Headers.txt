@@ -36,7 +36,7 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Returns: None
 
 ^ commit_all():
-    Moves temp records from the temp record list into the saved records
+    Moves all temp records from the temp record list into the saved records list.
 
     Args: None
     Raises: None
@@ -50,17 +50,21 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Raises: None
     Returns: None
 
-? commit_selection():
+^ commit_selection():
+    Adds selected temp records to the saved records list and restores deleted records. Supports single and multiple
+    selections.
+    
+    Args: None
+    Raises: None
+    Returns: None
 
-? delete_selection():
-
-^ disable_resize(event):
-    Prevents manual resizing of table column headers and its associated mouse graphic by interrupting the default
-    behavior of left-clicking and mouse motion when the mouse is positioned over a column separator.
+^ disable_resize_cursor(event):
+    Prevents the resizing cursor graphic by interrupting the default behavior of mouse motion when the mouse is
+    positioned over a column separator.
 
     Args:
-        event (tkinter.Event): A standard tkinter keybinding event. In this case, it is either '<Button-1>' (left-click)
-            or '<Motion>' (mouse movement), but it should not be manually declared.
+        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Motion>' (mouse movement), but
+        it should not be manually declared.
 
     Returns:
         str: This returns "break" back to the calling event, preventing it from performing its default behavior.
@@ -72,7 +76,7 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Raises: None
     Returns: None
 
-^ exit_functions():
+& exit_functions():
     Postpones exiting the program to perform obligatory exit functions such as saving the Datalog.
     
     Args: None
@@ -88,18 +92,25 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Returns: None
 
 ^ get_selection(stop_select: bool = False):
-    Grabs the contents of the currently selected line in the viewport table and uses that information to locate the
-    record in its respective record list.
+    Grabs the contents of the currently selected lines in the viewport table and uses that information to locate the
+    records in their respective record lists.
 
     Args:
-        stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the
-            record's list location. When used for record modifications, this should always be set to True, but for
-            purposes that don't change the record values, set it to False. Defaults to False.
+        stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the record's
+            list location. When used for record modifications, this should always be set to True, but for purposes that
+            don't change the record values, set it to False. Defaults to False.
 
     Raises: None
     Returns:
         list: When successful, this returns a list that can be used by another function to locate and access the item
             more easily.
+
+^ hide_toggle():
+    Used to set the appearance of toggle buttons used to hide records with a specific status.
+
+    Args: None
+    Raises: None
+    Returns: None
 
 ^ link_to_github():
     Opens a link to the SaleTrax repository on GitHub.
@@ -126,7 +137,13 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Raises: None
     Returns: None
 
-<< pop_filter():
+^ pop_filter(clear: bool = False):
+    This populates the filtered record list based on active filters and sorting options, with optional stacking.
+    Alternatively, it can also clear the filtered record list, enforcing the use of the standard master list in
+    populating the viewport table instead.
+
+    Args:
+        clear (bool, optional): Set to True to bypass the use of filters and sorting. Defaults to False.
 
 ^ pop_master(send_log: bool = False):
     This clears the current master record list and repopulates it with data from the saved, deleted, invalid, and temp
@@ -167,15 +184,19 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Returns: None
 
 ^ reject_all():
-    Permanently removes all temporary records from the program.
-    
+    Rejects all temporary records in one batch action.
+
     Args: None
     Raises: None
     Returns: None
 
-? reject_selection():
-
-? restore_selection():
+^ reject_selection():
+    Deletes the selected temp, saved, and invalid records, excluding them from export. Supports single and multiple
+    selections.
+    
+    Args: None
+    Raises: None
+    Returns: None
 
 ^ root_update():
     A recreation of a traditional main loop run every 100 ms, written as a partial redirection of the 'mainloop()'
@@ -212,6 +233,24 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Raises: None
     Returns: None
 
+^ toggle_filter():
+    This turns off all active filters and toggles when the user invokes it.
+
+    Args: None
+    Raises: None
+    Returns: None
+
+^ tree_click(event):
+    This determines which area of the Treeview object was clicked to determine which action it takes. If a separator was
+    clicked, do nothing. If a column header was clicked, sort the contents of the tree based the column header.
+
+    Args:
+        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Button-1>' (mouse left-click), but
+        it should not be manually declared.
+
+    Returns:
+        str: This returns "break" back to the calling event, preventing it from performing its default behavior.
+
 ^ validate_temp():
     Processes every individual record in the temp record list after importing to ensure they meet the requirements of
     the program. This may include combining similar keys (such as "Date" and "Time" into "Timestamp"), renaming keys to
@@ -221,8 +260,6 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Args: None
     Raises: None
     Returns: None
-
-<< view_temp():
 
 & write_file(path: str):
     Writes all records with "Saved" status to a CSV, ODS, or XLSX file.
