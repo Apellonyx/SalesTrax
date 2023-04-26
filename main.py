@@ -1,9 +1,9 @@
 """
 Program Name: SalesTrax
-Version: 0.1.2
+Version: 0.1.3
 Status: Prototype
 Created on: 2023-04-09
-Last updated: 2023-04-22
+Last updated: 2023-04-26
 Created with: Python 3.11.2
 Author: Danny Fleenor
 Contributors:
@@ -13,6 +13,7 @@ Contributors:
     Danny Fleenor: Program design and development; logo image
     Fredrik Lundh, Guido van Rossum, Steen Lumholt: Tkinter GUI library
     Georg Brandl: Webbrowser browser interface library
+    Isarra (Wikimedia Commons): Question mark image
     Wes McKinney: Pandas file import library
     www.aha-soft.com: Shortcut bar images
 
@@ -24,14 +25,30 @@ Description:
 
     Having said that, at this time, SalesTrax functions as a simple file merger for tablular financial documents. It
     reads CSV, ODS, and Excel documents, removes duplicate records, and provides a framework for manual record
-    exclusions in the output file, which include CSV, ODS, and XLSX format. Note that any documents without a "Date" or
-    "Timestamp" column WILL be rejected from being imported, but there are no other solid requirements for file content.
+    exclusions in the output file, which include CSV, ODS, and XLSX format. Note that any imported documents should have
+    consistent column ordering between files, but there are no other solid requirements for file content.
     
     As of update 0.1.2, more than one record can now be selected at once, allowing CTRL and SHIFT clicking for multiple
     selection. Clicking on a column header will sort the table using that column as the sort criterion, and the "Hide
     Saved," "Hide Temp," "Hide Invalid," and "Hide Deleted" shortcut buttons (along with their respective "View" menu
     counterparts) are now functional. Any active sorting or filtering can be reset back to program defaults by pressing
     either the "Toggle Filter..." button on the shortcut bar or its counterpart in the "View" menu cascade.
+    
+    As of update 0.1.3, basic user-defined validation control is now available. By clicking any of the options under the
+    "Lists" menu cascade, users can enter strings to check for in specific fields, and any record that doesn't have one
+    of the defined strings will be invalidated, excluding it from export. There is an "Auto-Populate" button for each
+    field, which will take all of the values from the currently loaded records (filter-aware) and fill the listbox with
+    those values. Individual values can then be deleted from the list to exclude them. Alternatively, this blacklist
+    functionality can be reversed into a whitelist by only adding those strings that you wish to keep, which can be done
+    manually with the "Add New Entry" button. This whitelist/blacklist system is meant to be used as a placeholder for
+    proper filtering algorithms for the time being, as proper filtering is as yet still unimplemented. Note that if a
+    blacklisted value is added BACK to a validation list, any matching records will become valid again, but they will be
+    classified as "Temporary" records, regardless of their previous status. I am unsure of how to remedy this. If at any
+    point, you wish to no longer use validation control for a field, simply delete all of the entries in that field's
+    Validation Control tab, and the entire system will ignore that field in subsequent validation checks.
+    
+    The next update will focus on implementing the generation of line charts at least, but it may also introduce bar
+    and/or pie charts, depending on how well I manage my time.
     
     PROPER filtering will not be available until a later update. Record modification, too, is planned for implementation
     at some point, but I cannot promise exactly when that will be.
@@ -51,7 +68,7 @@ from tktooltip import ToolTip
 # * This isn't actually needed for the list variables, but other datatypes can't be modified in functions without either
 # * global or class definition. I chose class definition, as nearly every source I've found on the topic specifically
 # * warns against global variables in almost all cases.
-class stvars:
+class StVars:
     # Keep a backup of all Datalog messages in iterable format
     datalog_msgs = list()
     # Saved records; base data list
@@ -66,16 +83,26 @@ class stvars:
     records_master = list()
     # Temporary records; base data list
     records_temp = list()
-    # Validation strings for the 'Category' field
-    valid_categories = list()
+    # Validation strings for the 'Department' field
+    valid_departments = list()
     # Validation strings for the 'Employee' field
     valid_employees = list()
     # Validation strings for the 'Location' field
     valid_locations = list()
-    
+
+    # The path for most recently imported document with temp records still active:
     current_file = str()
+    # Whether a filter and/or sort is currently active:
     filter_toggle = bool()
+    # The width of the primary monitor (used for positioning popups):
+    monitor_width = int()
+    # The height of the primary monitor (used for positioning popups):
+    monitor_height = int()
+    # Whether the Validation Control window is visible (used for updating validation lists):
+    notebook_on = bool()
+    # The column by which to sort records:
     sort_column = str()
+    # Whether to sort 'sort_column' in ascending or descending order:
     sort_descending = bool(True)
 
 
@@ -83,13 +110,13 @@ class stvars:
 # Updated: All good for now.
 def check_temp_count():
     """
-    Check that 'stvars.records_temp' is empty before attempting to load a file.
+    Check that 'StVars.records_temp' is empty before attempting to load a file.
 
     Args: None
     Raises: None
     Returns: None
     """
-    if len(stvars.records_temp) == 0:
+    if len(StVars.records_temp) == 0:
         # All records are either saved or rejected. Proceed to open the file selection window:
         load_file()
     else:
@@ -100,7 +127,7 @@ def check_temp_count():
 # Updated: All good for now.
 def clear_all_data():
     """
-    Clears all loaded data from all persistent lists EXCEPT 'stvars.datalog_msgs'. It allows the user to continue using
+    Clears all loaded data from all persistent lists EXCEPT 'StVars.datalog_msgs'. It allows the user to continue using
     the program to work on another document set without needing to close the program to do so.
 
     Args: None
@@ -112,18 +139,18 @@ def clear_all_data():
         base_tree.selection_remove(base_tree.selection()[0])
     # Clear all records from all record lists:
     iter8 = 0
-    while len(stvars.records_saved) > 0:
-        stvars.records_saved.remove(stvars.records_saved[0])
-    while len(stvars.records_deleted) > 0:
-        stvars.records_deleted.remove(stvars.records_deleted[0])
-    while len(stvars.records_filter) > 0:
-        stvars.records_filter.remove(stvars.records_filter[0])
-    while len(stvars.records_invalid) > 0:
-        stvars.records_invalid.remove(stvars.records_invalid[0])
-    while len(stvars.records_temp) > 0:
-        stvars.records_temp.remove(stvars.records_temp[0])
-    while len(stvars.records_master) > 0:
-        stvars.records_master.remove(stvars.records_master[0])
+    while len(StVars.records_saved) > 0:
+        StVars.records_saved.remove(StVars.records_saved[0])
+    while len(StVars.records_deleted) > 0:
+        StVars.records_deleted.remove(StVars.records_deleted[0])
+    while len(StVars.records_filter) > 0:
+        StVars.records_filter.remove(StVars.records_filter[0])
+    while len(StVars.records_invalid) > 0:
+        StVars.records_invalid.remove(StVars.records_invalid[0])
+    while len(StVars.records_temp) > 0:
+        StVars.records_temp.remove(StVars.records_temp[0])
+    while len(StVars.records_master) > 0:
+        StVars.records_master.remove(StVars.records_master[0])
         # Since all the other record lists are inside this one, only count its records:
         iter8 += 1
     # Don't log this action if the record lists were already empty.
@@ -131,14 +158,14 @@ def clear_all_data():
         log_msg(msg=(str(iter8) + " records were cleared from memory."))
     # Clear all user-defined field validation lists:
     iter8 = 0
-    while len(stvars.valid_categories) > 0:
-        stvars.valid_categories.remove(stvars.valid_categories[0])
+    while len(StVars.valid_departments) > 0:
+        StVars.valid_departments.remove(StVars.valid_departments[0])
         iter8 += 1
-    while len(stvars.valid_employees) > 0:
-        stvars.valid_employees.remove(stvars.valid_employees[0])
+    while len(StVars.valid_employees) > 0:
+        StVars.valid_employees.remove(StVars.valid_employees[0])
         iter8 += 1
-    while len(stvars.valid_locations) > 0:
-        stvars.valid_locations.remove(stvars.valid_locations[0])
+    while len(StVars.valid_locations) > 0:
+        StVars.valid_locations.remove(StVars.valid_locations[0])
         iter8 += 1
     # Don't log this action if the validation lists were already empty.
     if iter8 > 0:
@@ -178,28 +205,31 @@ def commit_all():
     # Only run this function if there are temporary records:
     # * This shouldn't be necessary, since the buttons and menu options for this are disabled,
     # * but it's here as a failsafe. Better safe than sorry.
-    if len(stvars.records_temp) > 0:
+    if len(StVars.records_temp) > 0:
         # Deselect any currently selected rows:
         # * This is in place because if a record is still selected when 'Status' values are modified,
         # * it causes an infinite loop in the 'get_selection()' function.
         if len(base_tree.selection()) > 0:
             base_tree.selection_remove(base_tree.selection()[0])
         iter8 = 0
-        while len(stvars.records_temp) > 0:
+        while len(StVars.records_temp) > 0:
             # Change the status of each record from "Temporary" to "Saved", for treeview color sorting:
-            stvars.records_temp[0]["Status"] = "Saved"
-            # Add each record to 'stvars.records_saved' in the same order they appear in 'stvars.records_temp':
-            stvars.records_saved.append(stvars.records_temp[0])
-            # Then delete the 'stvars.records_temp' copy of the record:
-            stvars.records_temp.remove(stvars.records_temp[0])
+            StVars.records_temp[0]["Status"] = "Saved"
+            # Add each record to 'StVars.records_saved' in the same order they appear in 'StVars.records_temp':
+            StVars.records_saved.append(StVars.records_temp[0])
+            # Then delete the 'StVars.records_temp' copy of the record:
+            StVars.records_temp.remove(StVars.records_temp[0])
             # As always, keep count of the number of records changed, for logging purposes:
             iter8 += 1
         if iter8 > 0:
             # Sort by timestamp if one is present:
-            if "Timestamp" in stvars.records_saved[0].keys():
-                stvars.records_saved.sort(key=lambda d: d["Timestamp"], reverse=False)
+            if len(StVars.records_saved) > 0:
+                heading = list(StVars.records_saved[0].keys())[0]
+                StVars.records_saved.sort(
+                    key=lambda d: (d[heading] == "", d[heading]), reverse=False
+                )
             # Log the record changes:
-            log_msg(msg=(str(iter8) + " records were committed to memory."))
+            log_msg(msg=(str(iter8) + " valid records were committed to memory."))
             # Only refresh the tree if there were changes made by this function:
             refresh_table(master_log=True)
 
@@ -216,6 +246,13 @@ def commit_popup():
     """
     # Create toplevel 'tkinter' window:
     popup = tk.Toplevel(root)
+    # Set the size and position of the popup (centered to the primary monitor):
+    popup.geometry(
+        "400x150+"
+        + str(int((StVars.monitor_width / 2) - 250))
+        + "+"
+        + str(int((StVars.monitor_height / 2) - 125))
+    )
     # Assign the SalesTrax logo as the window icon:
     popup.iconbitmap("Images/salestrax_icon_bw.ico")
     # Assign a suitable title to the window header:
@@ -227,10 +264,6 @@ def commit_popup():
         "WM_DELETE_WINDOW",
         func=lambda: [root.attributes("-disabled", False), popup.destroy()],
     )
-    # Open the toplevel window in the center of the screen:
-    # * Note that this isn't precisely the center of the screen, because the window geometry isn't a fixed value set,
-    # * but it is approximately centered, so the user should see it straight away.
-    popup.tk.eval(f"tk::PlaceWindow {str(popup)} center")
     # Set the toplevel window as the window with user focus:
     popup.focus_set()
     # Play the Windows popup 'ding' when the window opens:
@@ -244,13 +277,13 @@ def commit_popup():
     # Compose the popup's text content to show how many temp records are still in the document:
     msg = (
         "You have "
-        + str(len(stvars.records_temp))
+        + str(len(StVars.records_temp))
         + " temporary records. SalesTrax cannot load new data until all records"
         + " are either saved or rejected. Would you like to commit them all,"
         + " reject them all, or cancel loading to review them?"
     )
     # Create a label to hold the above message and apply line wrapping to it:
-    warn_label = tk.Label(top_frame, text=msg, wraplength=300)
+    warn_label = tk.Label(top_frame, text=msg, wraplength=275, justify="left")
     # Define the three buttons used for the user's decision. All three should re-enable access to the root window:
     btn_commit_all = tk.Button(
         popup,
@@ -259,6 +292,7 @@ def commit_popup():
         # Have the 'Commit All' button actually commit all temp records before opening the 'Open File' dialog:
         command=lambda: [
             root.attributes("-disabled", False),
+            root.focus_force(),
             commit_all(),
             load_file(),
             popup.destroy(),
@@ -271,6 +305,7 @@ def commit_popup():
         # Have the 'Reject All' button reject all temp records before opening the 'Open File' dialog:
         command=lambda: [
             root.attributes("-disabled", False),
+            root.focus_force(),
             reject_all(),
             load_file(),
             popup.destroy(),
@@ -283,6 +318,7 @@ def commit_popup():
         # Have the 'Review Temporary' set the record filter to only show temp records:
         command=lambda: [
             root.attributes("-disabled", False),
+            root.focus_force(),
             # Turn off any currently active filters and/or sorting:
             toggle_filter(),
             # Turn on all 'Hide *' filters except 'Hide Temporary Records':
@@ -293,15 +329,16 @@ def commit_popup():
         ],
     )
     # Place the frame in the first row of the toplevel window:
-    top_frame.grid(row=0, column=0, columnspan=3, padx=25, pady=10)
+    top_frame.grid(row=0, column=0, columnspan=3, padx=25, pady=(15, 10))
     # Place the icon on the left side of the frame:
     icon.grid(row=0, column=0)
     # Place the body message on the right side of the frame:
     warn_label.grid(row=0, column=1, padx=(25, 0))
     # Place the three decision buttons under the frame:
-    btn_commit_all.grid(row=1, column=0, padx=(40, 0), pady=(10, 25))
-    btn_reject_all.grid(row=1, column=1, pady=(10, 25))
-    btn_review_temp.grid(row=1, column=2, padx=(0, 40), pady=(10, 25))
+    btn_commit_all.grid(row=1, column=0, padx=(30, 0), pady=(10, 15))
+    btn_reject_all.grid(row=1, column=1, pady=(10, 15))
+    btn_review_temp.grid(row=1, column=2, padx=(0, 30), pady=(10, 15))
+    btn_review_temp.focus_set()
 
 
 # Updated: All good for now.
@@ -324,48 +361,48 @@ def commit_selection():
             if data_address[0][row] == "Temporary":
                 # Change the status of the record to "Saved":
                 # Notes: The next code line raises a warning in PyCharm, but it isn't an error.
-                # * The problem stems from PyCharm not recognizing that 'stvars.records_temp[data_address[1][row]]'
+                # * The problem stems from PyCharm not recognizing that 'StVars.records_temp[data_address[1][row]]'
                 # * refers to a dictionary, not a list. It's not a big deal, but I thought I should mention it in case
                 # *someone takes over the code, tries to fix it, and breaks the program. Don't fix it. It's not broken.
-                stvars.records_temp[data_address[1][row]]["Status"] = "Saved"
+                StVars.records_temp[data_address[1][row]]["Status"] = "Saved"
                 # Add the record to the saved records list:
-                stvars.records_saved.append(stvars.records_temp[data_address[1][row]])
+                StVars.records_saved.append(StVars.records_temp[data_address[1][row]])
                 # Count successes:
                 iter8 += 1
             elif data_address[0][row] == "Deleted":
                 # Check for validation errors:
-                if "" in stvars.records_deleted[data_address[1][row]].values():
+                if "" in StVars.records_deleted[data_address[1][row]].values():
                     # Change the status of the record to "Invalid":
                     # * See the 'Notes' above for why this raises a warning in PyCharm.
-                    stvars.records_deleted[data_address[1][row]]["Status"] = "Invalid"
+                    StVars.records_deleted[data_address[1][row]]["Status"] = "Invalid"
                     # Add the record to the invalid record list:
-                    stvars.records_invalid.append(
-                        stvars.records_deleted[data_address[1][row]]
+                    StVars.records_invalid.append(
+                        StVars.records_deleted[data_address[1][row]]
                     )
                     # Count invalid successes:
                     invalid8 += 1
                 else:
                     # Change the status of the record to "Saved":
                     # * See the 'Notes' above for why this raises a warning in PyCharm.
-                    stvars.records_deleted[data_address[1][row]]["Status"] = "Saved"
+                    StVars.records_deleted[data_address[1][row]]["Status"] = "Saved"
                     # Add the record to the saved records list:
-                    stvars.records_saved.append(
-                        stvars.records_deleted[data_address[1][row]]
+                    StVars.records_saved.append(
+                        StVars.records_deleted[data_address[1][row]]
                     )
                     # Count successes:
                     iter8 += 1
             row += 1
         # Remove each record from its previous record list from the bottom up:
-        # * This can't be done top down because it will modify the indeces of lower records.
+        # * This can't be done top down because it will modify the indeces of lower records, leading to indexing errors.
         row = len(data_address[0]) - 1
         while row >= 0:
             if data_address[0][row] == "Temporary":
                 # Remove from the temp records list:
-                stvars.records_temp.remove(stvars.records_temp[data_address[1][row]])
+                StVars.records_temp.remove(StVars.records_temp[data_address[1][row]])
             elif data_address[0][row] == "Deleted":
                 # Remove from the deleted records list:
-                stvars.records_deleted.remove(
-                    stvars.records_deleted[data_address[1][row]]
+                StVars.records_deleted.remove(
+                    StVars.records_deleted[data_address[1][row]]
                 )
             row -= 1
         if (iter8 > 0) or (invalid8 > 0):
@@ -378,35 +415,35 @@ def commit_selection():
                         str(iter8)
                         + " valid records and "
                         + str(invalid8)
-                        + " invalid records were stored in memory.",
+                        + " invalid records were committed to memory.",
                         popup=False,
                     )
                 elif (iter8 > 1) and (invalid8 == 1):
                     log_msg(
                         str(iter8)
-                        + " valid records and 1 invalid record were stored in memory.",
+                        + " valid records and 1 invalid record were committed to memory.",
                         popup=False,
                     )
                 else:
                     log_msg(
                         "1 valid record and "
                         + str(invalid8)
-                        + " invalid records were stored in memory.",
+                        + " invalid records were committed to memory.",
                         popup=False,
                     )
             elif (iter8 > 1) and (invalid8 == 0):
                 log_msg(
-                    str(iter8) + " valid records were stored in memory.", popup=False
+                    str(iter8) + " valid records were committed to memory.", popup=False
                 )
             elif (iter8 == 0) and (invalid8 > 1):
                 log_msg(
-                    str(invalid8) + " invalid records were stored in memory.",
+                    str(invalid8) + " invalid records were committed to memory.",
                     popup=False,
                 )
             elif (iter8 == 1) and (invalid8 == 0):
-                log_msg("1 valid record was stored in memory.", popup=False)
+                log_msg("1 valid record was committed to memory.", popup=False)
             else:
-                log_msg("1 invalid record was stored in memory.", popup=False)
+                log_msg("1 invalid record was committed to memory.", popup=False)
             row = 0
             while row < len(data_address[2]):
                 # Since performing this operation deselects the rows, reselect them:
@@ -449,19 +486,78 @@ def do_nothing():
     pass
 
 
-# Incomplete: This should also prompt the user to export their work if any modified records are loaded.
+# Updated: All good for now.
 def exit_functions():
     """
-    Postpones exiting the program to perform obligatory exit functions such as saving the Datalog.
+    Postpones exiting the program to perform obligatory exit functions such as saving the Datalog and exporting saved
+    records that are yet to be exported.
 
     Args: None
     Raises: None
     Returns: None
     """
-    # Save the contents of the Datalog to file:
-    save_log()
-    # Then safely close the program
-    root.quit()
+    if len(StVars.records_saved) > 0:
+        # Get a list of Datalog indeces containing the word "export":
+        last_export = [
+            index for index, sub in enumerate(StVars.datalog_msgs) if "export" in sub
+        ]
+        if len(last_export) > 0:
+            # Trim the list down to the most recent index only:
+            last_export = last_export[-1]
+        else:
+            # If there are no indeces containing the word "export", set 'last_export' to -1 (no file exports):
+            last_export = -1
+        # Get a list of Datalog indeces containing the word "commit":
+        last_save = list(
+            [index for index, sub in enumerate(StVars.datalog_msgs) if "commit" in sub]
+        )
+        while len(last_save) > 0:
+            # Only trim the list to the most recent index if the index contains the word "valid" (but not "invalid"):
+            if " valid " in StVars.datalog_msgs[last_save[-1]]:
+                last_save = last_save[-1]
+                # Break the loop once one has been found:
+                break
+            else:
+                # If the index only contains messages relating to "invalid" records, remove that index and move to the
+                # next most recent index with "commit" in it:
+                last_save.remove(last_save[-1])
+        # If all "commit" indeces are removed from the list, set 'last_save' to -1 (no saved records):
+        # * Technically, this should never actually happen, since 'records_saved' must have a length of at least 1 for
+        # * this function to even do anything. Still, better safe than sorry.
+        if last_save == []:
+            last_save = -1
+        if last_save > last_export:
+            # Display the "Save Work?" dialog only if there are records that have been saved following the most recent
+            # file export:
+            answer = messagebox.askyesnocancel(
+                title="Unsaved Work",
+                message="You have saved records that have not been exported to disk. Would you like to export them?",
+            )
+            # If the user clicks "Cancel", prevent the program from closing, but don't do anything else:
+            if answer == None:
+                pass
+            # If the user clicks "Yes", open the "Save File As..." dialog:
+            elif answer:
+                export_file()
+                # If the user exports the file, it will be recorded in the most recent Datalog message. If it isn't, the
+                # user clicked "Cancel" in the "Save File As..." dialog, so prevent the program from closing, but don't
+                # do anything else:
+                if "export" in StVars.datalog_msgs[-1]:
+                    # If the user exports a file successfully, save a Datalog file and quit SalesTrax:
+                    save_log()
+                    root.quit()
+            # If the user clicks "No", just save a Datalog file and quit SalesTrax without exporting:
+            else:
+                save_log()
+                root.quit()
+        # If the user hasn't saved any records since the most recent export, save a Datalog file and quit SalesTrax:
+        else:
+            save_log()
+            root.quit()
+    # If there are no saved records, just save a Datalog file (if necessary) and quit SalesTrax:
+    else:
+        save_log()
+        root.quit()
 
 
 # Updated: All good for now.
@@ -559,9 +655,9 @@ def get_selection(stop_select: bool = False):
             if selection[row]["Status"] == "Saved":
                 record = 0
                 iter8 = 0
-                while record < len(stvars.records_saved):
+                while record < len(StVars.records_saved):
                     # Compare the selected record to records in the saved records list:
-                    if selection[row] == stvars.records_saved[record]:
+                    if selection[row] == StVars.records_saved[record]:
                         # When a match is found, store the "Status" and record list index:
                         rec_status[row] = selection[row]["Status"]
                         rec_index[row] = record
@@ -569,7 +665,7 @@ def get_selection(stop_select: bool = False):
                         iter8 += 1
                     record += 1
                 # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
-                if iter8 == len(stvars.records_saved):
+                if iter8 == len(StVars.records_saved):
                     log_msg(
                         "Something went wrong. A memory address for the selected record could not be found. Try "
                         + "refreshing the table and then try again.",
@@ -580,9 +676,9 @@ def get_selection(stop_select: bool = False):
             elif selection[row]["Status"] == "Temporary":
                 record = 0
                 iter8 = 0
-                while record < len(stvars.records_temp):
+                while record < len(StVars.records_temp):
                     # Compare the selected record to records in the temp records list:
-                    if selection[row] == stvars.records_temp[record]:
+                    if selection[row] == StVars.records_temp[record]:
                         # When a match is found, store the "Status" and record list index:
                         rec_status[row] = selection[row]["Status"]
                         rec_index[row] = record
@@ -590,7 +686,7 @@ def get_selection(stop_select: bool = False):
                         iter8 += 1
                     record += 1
                 # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
-                if iter8 == len(stvars.records_temp):
+                if iter8 == len(StVars.records_temp):
                     log_msg(
                         "Something went wrong. A memory address for the selected record could not be found. Try "
                         + "refreshing the table and then try again.",
@@ -601,9 +697,9 @@ def get_selection(stop_select: bool = False):
             elif selection[row]["Status"] == "Invalid":
                 record = 0
                 iter8 = 0
-                while record < len(stvars.records_invalid):
+                while record < len(StVars.records_invalid):
                     # Compare the selected record to records in the invalid records list:
-                    if selection[row] == stvars.records_invalid[record]:
+                    if selection[row] == StVars.records_invalid[record]:
                         # When a match is found, store the "Status" and record list index:
                         rec_status[row] = selection[row]["Status"]
                         rec_index[row] = record
@@ -611,7 +707,7 @@ def get_selection(stop_select: bool = False):
                         iter8 += 1
                     record += 1
                 # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
-                if iter8 == len(stvars.records_invalid):
+                if iter8 == len(StVars.records_invalid):
                     log_msg(
                         "Something went wrong. A memory address for the selected record could not be found. Try "
                         + "refreshing the table and then try again.",
@@ -622,9 +718,9 @@ def get_selection(stop_select: bool = False):
             elif selection[row]["Status"] == "Deleted":
                 record = 0
                 iter8 = 0
-                while record < len(stvars.records_deleted):
+                while record < len(StVars.records_deleted):
                     # Compare the selected record to records in the deleted records list:
-                    if selection[row] == stvars.records_deleted[record]:
+                    if selection[row] == StVars.records_deleted[record]:
                         # When a match is found, store the "Status" and record list index:
                         rec_status[row] = selection[row]["Status"]
                         rec_index[row] = record
@@ -632,7 +728,7 @@ def get_selection(stop_select: bool = False):
                         iter8 += 1
                     record += 1
                 # If no match is found, a record was incorrectly recorded; report this to the Datalog and user:
-                if iter8 == len(stvars.records_deleted):
+                if iter8 == len(StVars.records_deleted):
                     log_msg(
                         "Something went wrong. A memory address for the selected record could not be found. Try "
                         + "refreshing the table and then try again.",
@@ -669,14 +765,14 @@ def hide_toggle():
         or toggle_invalid.get()
         or toggle_saved.get()
         or toggle_temp.get()
-        or (stvars.sort_column != "")
+        or (StVars.sort_column != "")
     ):
         # If so, turn on the primary filter and sink its button:
-        stvars.filter_toggle = True
+        StVars.filter_toggle = True
         btn_filter.configure(relief="sunken")
     else:
         # If not, turn off the primary filter and raise its button:
-        stvars.filter_toggle = False
+        StVars.filter_toggle = False
         btn_filter.configure(relief="raised")
     # Do the same with the "Hide Deleted" button:
     if toggle_deleted.get():
@@ -762,13 +858,13 @@ def log_msg(msg: str = "This event is not functional yet.", popup: bool = True):
     Returns: None
     """
     # Get the number of messages that have already been logged during this session:
-    messages = len(stvars.datalog_msgs)
+    messages = len(StVars.datalog_msgs)
     # Grab a timestamp for the exact time when the message was sent to this function:
     time_now = pd.Timestamp.now().round(freq="s")
     # Compose the Datalog message using the information above and the contents of 'msg':
     full_msg = "%4s" % str(messages) + ": " + str(time_now) + ": " + msg + "\n"
     # Add the entire message to the 'dataLogged' list for backup:
-    stvars.datalog_msgs.append(full_msg)
+    StVars.datalog_msgs.append(full_msg)
     # Enable writing to the Datalog:
     datalog_body.configure(state="normal")
     # * Print the message to the Datalog, ensuring it appears at the top: The Datalog displays in reverse-order for
@@ -784,6 +880,157 @@ def log_msg(msg: str = "This event is not functional yet.", popup: bool = True):
 
 
 # Updated: All good for now.
+def notebook_update():
+    """
+    Updates the Validation Control window on a 100 ms loop whenever the window is open.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    if employees_entry.get() != "":
+        # Toggle on the "Add New Entry" button when the entry field has text in it:
+        if employees_add.cget("state") == "disabled":
+            employees_add.configure(state="normal")
+        # Enable the "<Return>" keybinding if the user is currently entering text into the entry field:
+        if (
+            employees_add.cget("state") == "normal"
+            and val_control.focus_get() == employees_entry
+        ):
+            val_control.bind("<Return>", func=lambda event: employees_add.invoke())
+        # Disable the "<Return>" keybinding if the user leaves the entry field or deletes its contents:
+        else:
+            val_control.unbind("<Return>")
+    else:
+        # Toggle off the "Add New Entry" button when the entry field is empty:
+        if employees_add.cget("state") == "normal":
+            employees_add.configure(state="disabled")
+    # Enable the "Auto-Populate" button when its required data is present:
+    if (len(base_tree.get_children()) > 0) and ("Employee" in base_tree["columns"]):
+        if employees_auto.cget("state") == "disabled":
+            employees_auto.configure(state="normal")
+    # Disable the "Auto-Populate" button if its requirements are not met:
+    else:
+        if employees_auto.cget("state") == "normal":
+            employees_auto.configure(state="disabled")
+    # Copy the contents of the currently selected listbox item into the entry field when the user selects something new:
+    if len(
+        employees_box.curselection()
+    ) > 0 and employees_selection.get() != employees_box.get(
+        employees_box.curselection()[0]
+    ):
+        employees_selection.configure(state="normal")
+        employees_selection.delete(0, "end")
+        employees_selection.insert(
+            0, employees_box.get(employees_box.curselection()[0])
+        )
+        employees_selection.configure(state="disabled")
+    # Enable the "Delete Entry" button when a listbox item is selected:
+    if employees_selection.get() != "":
+        if employees_delete.cget("state") == "disabled":
+            employees_delete.configure(state="normal")
+    # Disable the "Delete Entry" when no entries are selected:
+    else:
+        if employees_delete.cget("state") == "normal":
+            employees_delete.configure(state="disabled")
+
+    if locations_entry.get() != "":
+        # Toggle on the "Add New Entry" button when the entry field has text in it:
+        if locations_add.cget("state") == "disabled":
+            locations_add.configure(state="normal")
+        # Enable the "<Return>" keybinding if the user is currently entering text into the entry field:
+        if (
+            locations_add.cget("state") == "normal"
+            and val_control.focus_get() == locations_entry
+        ):
+            val_control.bind("<Return>", func=lambda event: locations_add.invoke())
+        # Disable the "<Return>" keybinding if the user leaves the entry field or deletes its contents:
+        else:
+            val_control.unbind("<Return>")
+    else:
+        # Toggle off the "Add New Entry" button when the entry field is empty:
+        if locations_add.cget("state") == "normal":
+            locations_add.configure(state="disabled")
+    # Enable the "Auto-Populate" button when its required data is present:
+    if (len(base_tree.get_children()) > 0) and ("Location" in base_tree["columns"]):
+        if locations_auto.cget("state") == "disabled":
+            locations_auto.configure(state="normal")
+    # Disable the "Auto-Populate" button if its requirements are not met:
+    else:
+        if locations_auto.cget("state") == "normal":
+            locations_auto.configure(state="disabled")
+    # Copy the contents of the currently selected listbox item into the entry field when the user selects something new:
+    if len(
+        locations_box.curselection()
+    ) > 0 and locations_selection.get() != locations_box.get(
+        locations_box.curselection()[0]
+    ):
+        locations_selection.configure(state="normal")
+        locations_selection.delete(0, "end")
+        locations_selection.insert(
+            0, locations_box.get(locations_box.curselection()[0])
+        )
+        locations_selection.configure(state="disabled")
+    # Enable the "Delete Entry" button when a listbox item is selected:
+    if locations_selection.get() != "":
+        if locations_delete.cget("state") == "disabled":
+            locations_delete.configure(state="normal")
+    # Disable the "Delete Entry" when no entries are selected:
+    else:
+        if locations_delete.cget("state") == "normal":
+            locations_delete.configure(state="disabled")
+
+    if departments_entry.get() != "":
+        # Toggle on the "Add New Entry" button when the entry field has text in it:
+        if departments_add.cget("state") == "disabled":
+            departments_add.configure(state="normal")
+        # Enable the "<Return>" keybinding if the user is currently entering text into the entry field:
+        if (
+            departments_add.cget("state") == "normal"
+            and val_control.focus_get() == departments_entry
+        ):
+            val_control.bind("<Return>", func=lambda event: departments_add.invoke())
+        # Disable the "<Return>" keybinding if the user leaves the entry field or deletes its contents:
+        else:
+            val_control.unbind("<Return>")
+    else:
+        # Toggle off the "Add New Entry" button when the entry field is empty:
+        if departments_add.cget("state") == "normal":
+            departments_add.configure(state="disabled")
+    # Enable the "Auto-Populate" button when its required data is present:
+    if (len(base_tree.get_children()) > 0) and ("Department" in base_tree["columns"]):
+        if departments_auto.cget("state") == "disabled":
+            departments_auto.configure(state="normal")
+    # Disable the "Auto-Populate" button if its requirements are not met:
+    else:
+        if departments_auto.cget("state") == "normal":
+            departments_auto.configure(state="disabled")
+    # Copy the contents of the currently selected listbox item into the entry field when the user selects something new:
+    if len(
+        departments_box.curselection()
+    ) > 0 and departments_selection.get() != departments_box.get(
+        departments_box.curselection()[0]
+    ):
+        departments_selection.configure(state="normal")
+        departments_selection.delete(0, "end")
+        departments_selection.insert(
+            0, departments_box.get(departments_box.curselection()[0])
+        )
+        departments_selection.configure(state="disabled")
+    # Enable the "Delete Entry" button when a listbox item is selected:
+    if departments_selection.get() != "":
+        if departments_delete.cget("state") == "disabled":
+            departments_delete.configure(state="normal")
+    # Disable the "Delete Entry" when no entries are selected:
+    else:
+        if departments_delete.cget("state") == "normal":
+            departments_delete.configure(state="disabled")
+    # Schedule another loop of this function if the window is still open:
+    if StVars.notebook_on:
+        root.after(100, notebook_update)
+
+
+# Updated: All good for now.
 def pop_filter(clear: bool = False):
     """
     This populates the filtered record list based on active filters and sorting options, with optional stacking.
@@ -794,73 +1041,107 @@ def pop_filter(clear: bool = False):
         clear (bool, optional): Set to True to bypass the use of filters and sorting. Defaults to False.
     """
     # Regardless of the value of 'clear', the record list needs to be emptied in order to refresh accurately:
-    while len(stvars.records_filter) > 0:
-        stvars.records_filter.remove(stvars.records_filter[0])
+    while len(StVars.records_filter) > 0:
+        StVars.records_filter.remove(StVars.records_filter[0])
     if not clear:
-        # In the case where 'clear' is False, add the contents of 'stvars.records_master', which should have already
+        # In the case where 'clear' is False, add the contents of 'StVars.records_master', which should have already
         # been sorted by timestamp prior to calling this function:
-        for record in stvars.records_master:
-            stvars.records_filter.append(record)
+        for record in StVars.records_master:
+            StVars.records_filter.append(record)
         # If the "Hide Deleted" toggle is on, remove all deleted records from the filtered list:
         # * This is performed from the bottom up to prevent indexing errors:
         if toggle_deleted.get():
-            iter8 = len(stvars.records_filter) - 1
+            iter8 = len(StVars.records_filter) - 1
             while iter8 >= 0:
-                if stvars.records_filter[iter8]["Status"] == "Deleted":
-                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                if StVars.records_filter[iter8]["Status"] == "Deleted":
+                    StVars.records_filter.remove(StVars.records_filter[iter8])
                 iter8 -= 1
         # Remove invalid records if "Hide Invalid" is toggled on:
         if toggle_invalid.get():
-            iter8 = len(stvars.records_filter) - 1
+            iter8 = len(StVars.records_filter) - 1
             while iter8 >= 0:
-                if stvars.records_filter[iter8]["Status"] == "Invalid":
-                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                if StVars.records_filter[iter8]["Status"] == "Invalid":
+                    StVars.records_filter.remove(StVars.records_filter[iter8])
                 iter8 -= 1
         # Remove saved records if "Hide Saved" is toggled on:
         if toggle_saved.get():
-            iter8 = len(stvars.records_filter) - 1
+            iter8 = len(StVars.records_filter) - 1
             while iter8 >= 0:
-                if stvars.records_filter[iter8]["Status"] == "Saved":
-                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                if StVars.records_filter[iter8]["Status"] == "Saved":
+                    StVars.records_filter.remove(StVars.records_filter[iter8])
                 iter8 -= 1
         # Remove temp records if "Hide Temporary" is toggled on:
         if toggle_temp.get():
-            iter8 = len(stvars.records_filter) - 1
+            iter8 = len(StVars.records_filter) - 1
             while iter8 >= 0:
-                if stvars.records_filter[iter8]["Status"] == "Temporary":
-                    stvars.records_filter.remove(stvars.records_filter[iter8])
+                if StVars.records_filter[iter8]["Status"] == "Temporary":
+                    StVars.records_filter.remove(StVars.records_filter[iter8])
                 iter8 -= 1
-        if (stvars.sort_column != "") and (len(stvars.records_filter) > 0):
+        if (StVars.sort_column != "") and (len(StVars.records_filter) > 0):
             # If a sorting option is active, sort the filtered records using the chosen column:
             # * The 'lambda' function in this prevents empty cells from throwing TypeErrors.
-            stvars.records_filter.sort(
-                key=lambda d: (d[stvars.sort_column] == "", d[stvars.sort_column]),
-                reverse=stvars.sort_descending,
+            StVars.records_filter.sort(
+                key=lambda d: (d[StVars.sort_column] == "", d[StVars.sort_column]),
+                reverse=StVars.sort_descending,
             )
             # Sorting must also be applied to all of the component record lists to prevent indexing errors when
             # modifying sorted records:
-            # * TypeErrors can only be raised by invalid records, so only the master filtered list and the invalid
-            # * record list need to account for them.
-            if len(stvars.records_deleted) > 0:
-                stvars.records_deleted[stvars.sort_column].sort(
-                    key=lambda d: d[stvars.sort_column], reverse=stvars.sort_descending
+            if len(StVars.records_deleted) > 0:
+                StVars.records_deleted.sort(
+                    key=lambda d: (d[StVars.sort_column] == "", d[StVars.sort_column]),
+                    reverse=StVars.sort_descending,
                 )
-            if len(stvars.records_invalid) > 0:
-                stvars.records_invalid.sort(
-                    key=lambda d: (d[stvars.sort_column] == "", d[stvars.sort_column]),
-                    reverse=stvars.sort_descending,
+            if len(StVars.records_invalid) > 0:
+                StVars.records_invalid.sort(
+                    key=lambda d: (d[StVars.sort_column] == "", d[StVars.sort_column]),
+                    reverse=StVars.sort_descending,
                 )
-            if len(stvars.records_saved) > 0:
-                stvars.records_saved.sort(
-                    key=lambda d: d[stvars.sort_column], reverse=stvars.sort_descending
+            # * TypeErrors can only be raised by invalid records, so only the master filtered list, the invalid record
+            # * list, and the deleted record list need to account for them.
+            if len(StVars.records_saved) > 0:
+                StVars.records_saved.sort(
+                    key=lambda d: d[StVars.sort_column], reverse=StVars.sort_descending
                 )
-            if len(stvars.records_temp) > 0:
-                stvars.records_temp.sort(
-                    key=lambda d: d[stvars.sort_column], reverse=stvars.sort_descending
+            if len(StVars.records_temp) > 0:
+                StVars.records_temp.sort(
+                    key=lambda d: d[StVars.sort_column], reverse=StVars.sort_descending
                 )
         # In the case where all records have been filtered out of the table, create a single record informing the user:
-        if len(stvars.records_filter) == 0:
-            stvars.records_filter.append({"Status": "All Records Hidden"})
+        if len(StVars.records_filter) == 0:
+            StVars.records_filter.append({"Status": "All Records Hidden"})
+
+
+# Updated: All good for now.
+def pop_listbox(tab: str):
+    """
+    Populates the listboxes in the Validation Control window when the "Auto-Populate" button is pressed.
+
+    Args:
+        tab (str): The name of the tab to populate ("Employee", "Location", or "Department").
+    Raises: None
+    Returns: None
+    """
+    # Direct the program to the correct StVars list based on the value of 'tab':
+    if tab == "Employee":
+        list_picked = StVars.valid_employees
+    elif tab == "Location":
+        list_picked = StVars.valid_locations
+    elif tab == "Department":
+        list_picked = StVars.valid_departments
+    # Only update lists when they are included in the currently loaded records:
+    if tab in base_tree["columns"]:
+        # Check for active filters and sorts first. If yes, load the list values from the filtered records:
+        if len(StVars.records_filter) > 0:
+            for record in StVars.records_filter:
+                list_picked.append(record[tab])
+            # Refresh all validation lists to remove duplicates:
+            refresh_lists()
+        # If there aren't any filters or sorts active, load values from the master list instead:
+        elif len(StVars.records_master) > 0:
+            for record in StVars.records_master:
+                list_picked.append(record[tab])
+            # Refresh all validation lists to remove duplicates:
+            refresh_lists()
 
 
 # Updated: All good for now.
@@ -876,41 +1157,49 @@ def pop_master(send_log: bool = False):
     Returns: None
     """
     iter8 = 0
-    while len(stvars.records_master) > 0:
-        # Empty the contents of 'stvars.records_master' first:
-        stvars.records_master.remove(stvars.records_master[0])
-    # Ensure that 'stvars.records_deleted' is sorted by timestamp before importing its contents:
-    if len(stvars.records_deleted) > 0:
-        if "Timestamp" in stvars.records_deleted[0]:
-            stvars.records_deleted.sort(key=lambda d: d["Timestamp"], reverse=False)
-    for record in stvars.records_deleted:
-        # Next, add the entire contents of 'stvars.records_deleted' to the empty 'stvars.records_master':
-        stvars.records_master.append(record)
-        # Keep track of the number of records added to 'stvars.records_master' from this list:
+    while len(StVars.records_master) > 0:
+        # Empty the contents of 'StVars.records_master' first:
+        StVars.records_master.remove(StVars.records_master[0])
+    # Ensure that 'StVars.records_deleted' is sorted by its first column before importing its contents:
+    if len(StVars.records_deleted) > 0:
+        heading = list(StVars.records_deleted[0].keys())[0]
+        StVars.records_deleted.sort(
+            key=lambda d: (d[heading] == "", d[heading]), reverse=False
+        )
+    for record in StVars.records_deleted:
+        # Next, add the entire contents of 'StVars.records_deleted' to the empty 'StVars.records_master':
+        StVars.records_master.append(record)
+        # Keep track of the number of records added to 'StVars.records_master' from this list:
         iter8 += 1
-    # Ensure that 'stvars.records_invalid' is sorted by timestamp before importing its contents:
-    if len(stvars.records_invalid) > 0:
-        if "Timestamp" in stvars.records_invalid[0]:
-            stvars.records_invalid.sort(key=lambda d: d["Timestamp"], reverse=False)
-    for record in stvars.records_invalid:
+    # Ensure that 'StVars.records_invalid' is sorted by its first column before importing its contents:
+    if len(StVars.records_invalid) > 0:
+        heading = list(StVars.records_invalid[0].keys())[0]
+        StVars.records_invalid.sort(
+            key=lambda d: (d[heading] == "", d[heading]), reverse=False
+        )
+    for record in StVars.records_invalid:
         # Do the same for the other three lists:
-        stvars.records_master.append(record)
+        StVars.records_master.append(record)
         iter8 += 1
-    # Ensure that 'stvars.records_saved' is sorted by timestamp before importing its contents:
-    if len(stvars.records_saved) > 0:
-        if "Timestamp" in stvars.records_saved[0]:
-            stvars.records_saved.sort(key=lambda d: d["Timestamp"], reverse=False)
-    for record in stvars.records_saved:
-        stvars.records_master.append(record)
+    # Ensure that 'StVars.records_saved' is sorted by its first column before importing its contents:
+    if len(StVars.records_saved) > 0:
+        heading = list(StVars.records_saved[0].keys())[0]
+        StVars.records_saved.sort(
+            key=lambda d: (d[heading] == "", d[heading]), reverse=False
+        )
+    for record in StVars.records_saved:
+        StVars.records_master.append(record)
         iter8 += 1
-    # Ensure that 'stvars.records_temp' is sorted by timestamp before importing its contents:
-    if len(stvars.records_temp) > 0:
-        if "Timestamp" in stvars.records_temp[0]:
-            stvars.records_temp.sort(key=lambda d: d["Timestamp"], reverse=False)
-    for record in stvars.records_temp:
-        stvars.records_master.append(record)
+    # Ensure that 'StVars.records_temp' is sorted by its first column before importing its contents:
+    if len(StVars.records_temp) > 0:
+        heading = list(StVars.records_temp[0].keys())[0]
+        StVars.records_temp.sort(
+            key=lambda d: (d[heading] == "", d[heading]), reverse=False
+        )
+    for record in StVars.records_temp:
+        StVars.records_master.append(record)
         iter8 += 1
-    # As long as at least one record was added to 'stvars.records_master', print a message to a popup and to the Datalog
+    # As long as at least one record was added to 'StVars.records_master', print a message to a popup and to the Datalog
     # informing the user how many records are currently loaded.
     if iter8 > 0:
         if send_log:
@@ -924,7 +1213,7 @@ def pop_master(send_log: bool = False):
             )
         # If there is at least one temp record, enable the menu options, shortcut buttons, and shortcut keybindings
         # that can modify temp records in bulk operations:
-        if len(stvars.records_temp) > 0:
+        if len(StVars.records_temp) > 0:
             edit_menu.entryconfig("Commit All", state="normal")
             edit_menu.entryconfig("Reject All", state="normal")
             view_menu.entryconfig("Hide Temporary Records", state="normal")
@@ -946,7 +1235,7 @@ def pop_master(send_log: bool = False):
             root.unbind(sequence="<Shift-Return>")
             root.unbind(sequence="<Shift-Delete>")
         # Only enable data export menu option and shortcut button if there is at least one "Saved" record:
-        if len(stvars.records_saved) > 0:
+        if len(StVars.records_saved) > 0:
             file_menu.entryconfig("Export To...", state="normal")
             btn_export.config(state="normal")
             view_menu.entryconfig("Hide Saved Records", state="normal")
@@ -958,7 +1247,7 @@ def pop_master(send_log: bool = False):
             view_menu.entryconfig("Hide Saved Records", state="disabled")
             btn_hide_saved.config(state="disabled")
         # Enable batch actions that rely on deleted records if there are any deleted records:
-        if len(stvars.records_deleted) > 0:
+        if len(StVars.records_deleted) > 0:
             view_menu.entryconfig("Hide Deleted Records", state="normal")
             btn_hide_deleted.config(state="normal")
         # Otherwise, disable them:
@@ -966,7 +1255,7 @@ def pop_master(send_log: bool = False):
             view_menu.entryconfig("Hide Deleted Records", state="disabled")
             btn_hide_deleted.config(state="disabled")
         # Enable batch actions for invalid records if there are any invalid records:
-        if len(stvars.records_invalid) > 0:
+        if len(StVars.records_invalid) > 0:
             view_menu.entryconfig("Hide Invalid Records", state="normal")
             btn_hide_invalid.config(state="normal")
         # Otherwise, disable them:
@@ -985,9 +1274,12 @@ def pop_master(send_log: bool = False):
         btn_line.config(state="normal")
         btn_bar.config(state="normal")
         btn_pie.config(state="normal")
-        # Finally, sort the contents of 'stvars.records_master' by timestamp:
-        if "Timestamp" in stvars.records_master[0]:
-            stvars.records_master.sort(key=lambda d: d["Timestamp"], reverse=False)
+        # Finally, sort the contents of 'StVars.records_master' by its first column:
+        if len(StVars.records_master) > 0:
+            heading = list(StVars.records_master[0].keys())[0]
+            StVars.records_master.sort(
+                key=lambda d: (d[heading] == "", d[heading]), reverse=False
+            )
     # If there are no records loaded to any of the record lists, disable all menu options, buttons, and keybindings
     # that rely on table data:
     else:
@@ -1036,16 +1328,16 @@ def pop_temp(path: str):
     # Read data from all other supported file types using 'pd.read_excel()':
     else:
         data_loaded = pd.DataFrame(pd.read_excel(path)).fillna("")
-    # Add a status key to define the record in the 'stvars.records_temp' category:
+    # Add a status key to define the record in the 'StVars.records_temp' department:
     data_loaded["Status"] = "Temporary"
     # Convert the DataFrame to a list of dictionaries for more flexible manipulation:
     data_loaded = data_loaded.to_dict(orient="records")
-    # Pass the entire list of records into 'stvars.records_temp' for persistent storage:
+    # Pass the entire list of records into 'StVars.records_temp' for persistent storage:
     iter8 = 0
     while len(data_loaded) > 0:
-        stvars.records_temp.append(data_loaded[0])
+        StVars.records_temp.append(data_loaded[0])
         data_loaded.remove(data_loaded[0])
-        # Keep count of how many records were loaded into 'stvars.records_temp':
+        # Keep count of how many records were loaded into 'StVars.records_temp':
         iter8 += 1
     if iter8 > 0:
         # Pass the tallied record count into the Datalog:
@@ -1053,7 +1345,7 @@ def pop_temp(path: str):
             msg=(str(iter8) + ' records loaded from "' + str(path) + '".'),
             popup=False,
         )
-        stvars.current_file = str(path)
+        StVars.current_file = str(path)
         # Only pass on to the next step if there are records left to validate:
         validate_temp()
 
@@ -1068,21 +1360,21 @@ def pop_table():
     Raises: None
     Returns: None
     """
-    # Initialize an empty list variable to hold either 'stvars.records_filter' or 'stvars.records_master':
+    # Initialize an empty list variable to hold either 'StVars.records_filter' or 'StVars.records_master':
     list_used = list()
     # If there are any records selected in the treeview widget, deselect them:
     if len(base_tree.selection()) > 0:
         base_tree.selection_remove(base_tree.selection()[0])
-    # 'stvars.records_filter' will only have records in it if a filter or sort is active. If so, use
-    # 'stvars.records_filter' to name the column headers:
-    if len(stvars.records_filter) > 0:
-        base_tree["columns"] = tuple(stvars.records_filter[0].keys())
-        list_used = stvars.records_filter
-    # If 'stvars.records_filter' is empty, use 'stvars.records_master' to name the column headers instead:
-    elif len(stvars.records_master) > 0:
-        base_tree["columns"] = tuple(stvars.records_master[0].keys())
-        list_used = stvars.records_master
-    # If both 'stvars.records_filter' and 'stvars.records_master' are empty, don't provide any column headers:
+    # 'StVars.records_filter' will only have records in it if a filter or sort is active. If so, use
+    # 'StVars.records_filter' to name the column headers:
+    if len(StVars.records_filter) > 0:
+        base_tree["columns"] = tuple(StVars.records_filter[0].keys())
+        list_used = StVars.records_filter
+    # If 'StVars.records_filter' is empty, use 'StVars.records_master' to name the column headers instead:
+    elif len(StVars.records_master) > 0:
+        base_tree["columns"] = tuple(StVars.records_master[0].keys())
+        list_used = StVars.records_master
+    # If both 'StVars.records_filter' and 'StVars.records_master' are empty, don't provide any column headers:
     else:
         base_tree["columns"] = tuple()
     # Define the default Treeview column and its header, ensuring that it stays hidden, as its functions aren't used
@@ -1128,6 +1420,90 @@ def pop_table():
 
 
 # Updated: All good for now.
+def refresh_lists():
+    """
+    Sorts validation lists, and removes any duplicate entries, and refreshes the listboxes in the "Validation Control"
+    window.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    # Empty the listbox in the "Employees" tab:
+    while employees_box.size() > 0:
+        employees_box.delete(0)
+    # Iterate through the employee validation list from the bottom up, removing any duplicates:
+    if len(StVars.valid_employees) > 1:
+        invalid8 = len(StVars.valid_employees) - 1
+        while invalid8 >= 0:
+            iter8 = 0
+            while iter8 < invalid8:
+                if StVars.valid_employees[invalid8] == StVars.valid_employees[iter8]:
+                    StVars.valid_employees.remove(StVars.valid_employees[invalid8])
+                    break
+                iter8 += 1
+            invalid8 -= 1
+    # Sort the validation list:
+    if len(StVars.valid_employees) > 0:
+        StVars.valid_employees.sort()
+    # Repopulate the listbox with the refreshed validation list:
+    if len(StVars.valid_employees) > 0:
+        iter8 = 0
+        while iter8 < len(StVars.valid_employees):
+            employees_box.insert("end", StVars.valid_employees[iter8])
+            iter8 += 1
+    # Empty the listbox in the "Locations" tab:
+    while locations_box.size() > 0:
+        locations_box.delete(0)
+    # Iterate through the location validation list from the bottom up, removing any duplicates:
+    if len(StVars.valid_locations) > 1:
+        invalid8 = len(StVars.valid_locations) - 1
+        while invalid8 >= 0:
+            iter8 = 0
+            while iter8 < invalid8:
+                if StVars.valid_locations[invalid8] == StVars.valid_locations[iter8]:
+                    StVars.valid_locations.remove(StVars.valid_locations[invalid8])
+                    break
+                iter8 += 1
+            invalid8 -= 1
+    # Sort the validation list:
+    if len(StVars.valid_locations) > 0:
+        StVars.valid_locations.sort()
+    # Repopulate the listbox with the refreshed validation list:
+    if len(StVars.valid_locations) > 0:
+        iter8 = 0
+        while iter8 < len(StVars.valid_locations):
+            locations_box.insert("end", StVars.valid_locations[iter8])
+            iter8 += 1
+    # Empty the listbox in the "Departments" tab:
+    while departments_box.size() > 0:
+        departments_box.delete(0)
+    # Iterate through the department validation list from the bottom up, removing any duplicates:
+    if len(StVars.valid_departments) > 1:
+        invalid8 = len(StVars.valid_departments) - 1
+        while invalid8 >= 0:
+            iter8 = 0
+            while iter8 < invalid8:
+                if (
+                    StVars.valid_departments[invalid8]
+                    == StVars.valid_departments[iter8]
+                ):
+                    StVars.valid_departments.remove(StVars.valid_departments[invalid8])
+                    break
+                iter8 += 1
+            invalid8 -= 1
+    # Sort the validation list:
+    if len(StVars.valid_departments) > 0:
+        StVars.valid_departments.sort()
+    # Repopulate the listbox with the refreshed validation list:
+    if len(StVars.valid_departments) > 0:
+        iter8 = 0
+        while iter8 < len(StVars.valid_departments):
+            departments_box.insert("end", StVars.valid_departments[iter8])
+            iter8 += 1
+
+
+# Updated: All good for now.
 def refresh_table(repop_tree: bool = True, master_log: bool = False):
     """
     Clears the contents of the viewport table, refreshes the contents of the master and filtered record lists, and then
@@ -1143,13 +1519,15 @@ def refresh_table(repop_tree: bool = True, master_log: bool = False):
     """
     # Clear the contents of the viewport table:
     clear_table()
-    # Refresh the contents of 'stvars.records_master' (and optionally send a Datalog message):
+    # Update validation for all records:
+    validate_all()
+    # Refresh the contents of 'StVars.records_master' (and optionally send a Datalog message):
     if master_log:
         pop_master(send_log=True)
     else:
         pop_master()
-    if (stvars.filter_toggle) or (stvars.sort_column != ""):
-        # Refresh the contents of 'stvars.records_filter' if any filters or sorts are toggled on:
+    if (StVars.filter_toggle) or (StVars.sort_column != ""):
+        # Refresh the contents of 'StVars.records_filter' if any filters or sorts are toggled on:
         pop_filter()
     else:
         pop_filter(clear=True)
@@ -1171,23 +1549,26 @@ def reject_all():
     Returns: None
     """
     # Only do anything if there are temp records loaded:
-    if len(stvars.records_temp) > 0:
+    if len(StVars.records_temp) > 0:
         # If there are any selected rows in the viewport, deselect them:
         if len(base_tree.selection()) > 0:
             base_tree.selection_remove(base_tree.selection()[0])
         iter8 = 0
-        while len(stvars.records_temp) > 0:
+        while len(StVars.records_temp) > 0:
             # Change the status of each record:
-            stvars.records_temp[0]["Status"] = "Deleted"
+            StVars.records_temp[0]["Status"] = "Deleted"
             # Add the record to the end of the deleted records list:
-            stvars.records_deleted.append(stvars.records_temp[0])
+            StVars.records_deleted.append(StVars.records_temp[0])
             # Remove the record from the temp list:
-            stvars.records_temp.remove(stvars.records_temp[0])
+            StVars.records_temp.remove(StVars.records_temp[0])
             iter8 += 1
         if iter8 > 0:
-            # Sort all deleted records by timestamp:
-            if "Timestamp" in stvars.records_deleted[0].keys():
-                stvars.records_deleted.sort(key=lambda d: d["Timestamp"], reverse=False)
+            # Sort all deleted records by the first column:
+            if len(StVars.records_deleted) > 0:
+                heading = list(StVars.records_deleted[0].keys())[0]
+                StVars.records_deleted.sort(
+                    key=lambda d: (d[heading] == "", d[heading]), reverse=False
+                )
             # Pass a message to the Datalog if changes were made:
             log_msg(msg=(str(iter8) + " records were cleared from memory."))
             # Then refresh the table and have the master list pass its own message to the Datalog:
@@ -1215,28 +1596,28 @@ def reject_selection():
             if data_address[0][row] == "Saved":
                 # Modify the status to "Deleted":
                 # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-                stvars.records_saved[data_address[1][row]]["Status"] = "Deleted"
+                StVars.records_saved[data_address[1][row]]["Status"] = "Deleted"
                 # Add the record to the deleted records list:
-                stvars.records_deleted.append(
-                    stvars.records_saved[data_address[1][row]]
+                StVars.records_deleted.append(
+                    StVars.records_saved[data_address[1][row]]
                 )
                 # Record successes:
                 iter8 += 1
             elif data_address[0][row] == "Temporary":
                 # Modify the status to "Deleted":
                 # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-                stvars.records_temp[data_address[1][row]]["Status"] = "Deleted"
+                StVars.records_temp[data_address[1][row]]["Status"] = "Deleted"
                 # Add the record to the deleted records list:
-                stvars.records_deleted.append(stvars.records_temp[data_address[1][row]])
+                StVars.records_deleted.append(StVars.records_temp[data_address[1][row]])
                 # Record successes:
                 iter8 += 1
             elif data_address[0][row] == "Invalid":
                 # Modify the status to "Deleted":
                 # * See the 'Notes' in 'commit_selection()' for why this raises a warning in PyCharm.
-                stvars.records_invalid[data_address[1][row]]["Status"] = "Deleted"
+                StVars.records_invalid[data_address[1][row]]["Status"] = "Deleted"
                 # Add the record to the deleted records list:
-                stvars.records_deleted.append(
-                    stvars.records_invalid[data_address[1][row]]
+                StVars.records_deleted.append(
+                    StVars.records_invalid[data_address[1][row]]
                 )
                 # Record successes:
                 iter8 += 1
@@ -1247,14 +1628,14 @@ def reject_selection():
         while row >= 0:
             if data_address[0][row] == "Saved":
                 # Remove record from the saved records list:
-                stvars.records_saved.remove(stvars.records_saved[data_address[1][row]])
+                StVars.records_saved.remove(StVars.records_saved[data_address[1][row]])
             elif data_address[0][row] == "Temporary":
                 # Remove record from the temp records list:
-                stvars.records_temp.remove(stvars.records_temp[data_address[1][row]])
+                StVars.records_temp.remove(StVars.records_temp[data_address[1][row]])
             elif data_address[0][row] == "Invalid":
                 # Remove record from the invalid records list:
-                stvars.records_invalid.remove(
-                    stvars.records_invalid[data_address[1][row]]
+                StVars.records_invalid.remove(
+                    StVars.records_invalid[data_address[1][row]]
                 )
             row -= 1
         if iter8 > 0:
@@ -1284,10 +1665,10 @@ def root_update():
     Raises: None
     Returns: None
     """
-    # Set the "Toggle Filter..." button to the correct state depending on the value of 'stvars.filter_toggle':
-    if (stvars.filter_toggle) and (btn_filter.cget("relief") == "raised"):
+    # Set the "Toggle Filter..." button to the correct state depending on the value of 'StVars.filter_toggle':
+    if (StVars.filter_toggle) and (btn_filter.cget("relief") == "raised"):
         btn_filter.configure(relief="sunken")
-    elif (not stvars.filter_toggle) and (btn_filter.cget("relief") == "sunken"):
+    elif (not StVars.filter_toggle) and (btn_filter.cget("relief") == "sunken"):
         btn_filter.configure(relief="raised")
     # Toggle on the menu options and shortcut buttons associated with the record status of the selected row:
     if len(base_tree.selection()) > 0:
@@ -1296,7 +1677,7 @@ def root_update():
     else:
         select_toggle(state=False)
     # If there are Datalog messages, enable the "Save Datalog Contents" menu option:
-    if len(stvars.datalog_msgs) > 0:
+    if len(StVars.datalog_msgs) > 0:
         if view_menu.entrycget("Save Datalog Contents", option="state") == "disabled":
             view_menu.entryconfigure("Save Datalog Contents", state="normal")
     # If no Datalog contents, disable saving the Datalog:
@@ -1306,16 +1687,16 @@ def root_update():
     # Ensure the default treeview column stays hidden:
     base_tree.column("#0", width=0, stretch=False)
     # If all temp records have been accepted or rejected, reset the filename display to reflect this:
-    if len(stvars.records_temp) == 0:
+    if len(StVars.records_temp) == 0:
         status_file.configure(text="Unmanaged Records: None")
     else:
         # Make sure the status bar filename display updates when it changes:
         status_file.configure(
             text=(
                 "Unmanaged Records: "
-                + str(len(stvars.records_temp))
+                + str(len(StVars.records_temp))
                 + ' from "'
-                + stvars.current_file
+                + StVars.current_file
                 + '"'
             )
         )
@@ -1328,8 +1709,8 @@ def root_update():
 # Updated: All good for now.
 def save_log():
     """
-    Saves the contents of 'stvars.datalog_msgs' to a text file in the user's "My Documents/SalesTrax/Datalog" folder and
-    clears the contents of 'stvars.datalog_msgs'. Log files end with the date in "YYYY-MM-DD" format and an iterative
+    Saves the contents of 'StVars.datalog_msgs' to a text file in the user's "My Documents/SalesTrax/Datalog" folder and
+    clears the contents of 'StVars.datalog_msgs'. Log files end with the date in "YYYY-MM-DD" format and an iterative
     3-digit index number that allows multiple logs to be saved on the same date without overwriting earlier logs.
 
     Args: None
@@ -1337,7 +1718,7 @@ def save_log():
     Returns: None
     """
     # Do nothing if there are no messages in the Datalog:
-    if len(stvars.datalog_msgs) > 0:
+    if len(StVars.datalog_msgs) > 0:
         # Get the path of the user's "C:/Users/{USERNAME}/" folder:
         path = str(os.path.expanduser("~\\"))
         # Add the leaf folders to the path:
@@ -1358,14 +1739,14 @@ def save_log():
         # Create the file and open it for writing:
         file = open(file=filename, mode="w")
         # Write each Datalog message to the file in chronological order:
-        for msg in stvars.datalog_msgs:
+        for msg in StVars.datalog_msgs:
             file.write(msg)
         # Close the file to save its contents:
         file.close()
-        # Clear the contents of 'stvars.datalog_msgs' to prevent message doubling over multiple log files:
+        # Clear the contents of 'StVars.datalog_msgs' to prevent message doubling over multiple log files:
         # * This is really only necessary when the user manually saves the log.
-        while len(stvars.datalog_msgs) > 0:
-            stvars.datalog_msgs.remove(stvars.datalog_msgs[0])
+        while len(StVars.datalog_msgs) > 0:
+            StVars.datalog_msgs.remove(StVars.datalog_msgs[0])
         # Clear the contents of the 'datalog_body' Text object as well:
         datalog_body.delete("1.0", "end")
 
@@ -1499,7 +1880,7 @@ def toggle_filter():
     Returns: None
     """
     # Only do something if the filter toggle is already on:
-    if stvars.filter_toggle:
+    if StVars.filter_toggle:
         # Turn off the "Hide Deleted" toggle if it is on:
         if toggle_deleted.get():
             btn_hide_deleted.invoke()
@@ -1513,11 +1894,57 @@ def toggle_filter():
         if toggle_temp.get():
             btn_hide_temp.invoke()
         # Clear the sorting variables:
-        stvars.sort_column = str()
-        stvars.sort_descending = True
+        StVars.sort_column = str()
+        StVars.sort_descending = True
         # Turn off the filter toggle itself:
-        stvars.filter_toggle = False
+        StVars.filter_toggle = False
         # Refresh the table contents using default sorting in the master records list:
+        refresh_table()
+
+
+# Updated: All good for now.
+def toggle_notebook(state: bool = False, tab: str = "employees"):
+    """
+    Handles the visibility of the Validation Control window. Technically speaking, it does not actually close when
+    SalesTrax is running; it only hides.
+
+    Args:
+        state (bool, optional): When True, the window becomes visible, and when False, it is hidden. Defaults to False.
+        tab (str, optional): The name of the tab to open ("employees", "locations", or "departments"). Defaults to
+            "employees".
+    Raises: None
+    Returns: None
+    """
+    if state:
+        # Reveal the Validation Control window:
+        val_control.deiconify()
+        # Set it to the chosen tab:
+        if tab == "employees":
+            val_notebook.select(employees_tab)
+        elif tab == "locations":
+            val_notebook.select(locations_tab)
+        elif tab == "departments":
+            val_notebook.select(departments_tab)
+        # Start the Validation Control update loop:
+        StVars.notebook_on = True
+        notebook_update()
+        # Refresh the validation lists:
+        refresh_lists()
+        # Disable operations on 'root' window while the notebook is open:
+        root.attributes("-disabled", True)
+        # Direct keyboard focus to the Validation Control window:
+        val_control.focus_set()
+    else:
+        # Hide the Validation Control window:
+        val_control.withdraw()
+        # Turn off the Validation Control update loop:
+        StVars.notebook_on = False
+        # Re-enable 'root' window processing:
+        root.attributes("-disabled", False)
+        # Re-focus on 'root' window:
+        # * For some reason, the 'root' window hides behind other open windows without this command.
+        root.focus_force()
+        # Refresh the table, in case any record statuses have changed as a result of validation editing:
         refresh_table()
 
 
@@ -1544,17 +1971,200 @@ def tree_click(event):
         # Turn the gathered index into its actual text (for dictionary key comparisons):
         heading = base_tree["columns"][heading]
         # Only sort descending if the column is already sorted ascending:
-        if (not stvars.sort_descending) and (stvars.sort_column == heading):
-            stvars.sort_descending = True
+        if (not StVars.sort_descending) and (StVars.sort_column == heading):
+            StVars.sort_descending = True
         # Otherwise, sort ascending first:
         else:
-            stvars.sort_descending = False
+            StVars.sort_descending = False
         # Store the gathered heading in a persistent variable:
-        stvars.sort_column = heading
+        StVars.sort_column = heading
         # Turn on the filter toggle variable:
-        stvars.filter_toggle = True
+        StVars.filter_toggle = True
         # Refresh the contents of the table:
         refresh_table()
+
+
+# Updated: All good for now.
+def validate_all():
+    """
+    Iterates through the composite record lists to ensure their status hasn't been changed by validation control.
+    Redistributes any records that have changed status according to their new status.
+
+    Args: None
+    Raises: None
+    Returns: None
+    """
+    # Check saved records for newly invalid records:
+    if len(StVars.records_saved) > 0:
+        # Iterate in reverse order to prevent indexing errors:
+        iter8 = len(StVars.records_saved) - 1
+        while iter8 >= 0:
+            # Create a sentinel value to prevent double-processing:
+            invalid8 = 0
+            # Invalidate saved records with missing values:
+            if "" in StVars.records_saved[iter8].values():
+                StVars.records_saved[iter8]["Status"] = "Invalid"
+                StVars.records_invalid.append(StVars.records_saved[iter8])
+                StVars.records_saved.remove(StVars.records_saved[iter8])
+                # Set the sentinel value if any problems are found:
+                invalid8 = 1
+            if invalid8 == 0:
+                # Only apply string invalidation if the validation lists are already defined:
+                if (len(StVars.valid_employees) > 0) and (
+                    "Employee" in StVars.records_saved[iter8].keys()
+                ):
+                    # Invalidate saved records with invalid "Employee" fields:
+                    if (
+                        StVars.records_saved[iter8]["Employee"]
+                        not in StVars.valid_employees
+                    ):
+                        StVars.records_saved[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_saved[iter8])
+                        StVars.records_saved.remove(StVars.records_saved[iter8])
+                        # Set the sentinel value if any problems are found:
+                        invalid8 = 1
+            if invalid8 == 0:
+                # Only apply string invalidation if the validation lists are already defined:
+                if (len(StVars.valid_locations) > 0) and (
+                    "Location" in StVars.records_saved[iter8].keys()
+                ):
+                    # Invalidate saved records with invalid "Location" fields:
+                    if (
+                        StVars.records_saved[iter8]["Location"]
+                        not in StVars.valid_locations
+                    ):
+                        StVars.records_saved[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_saved[iter8])
+                        StVars.records_saved.remove(StVars.records_saved[iter8])
+                        # Set the sentinel value if any problems are found:
+                        invalid8 = 1
+            if invalid8 == 0:
+                # Only apply string invalidation if the validation lists are already defined:
+                if (len(StVars.valid_departments) > 0) and (
+                    "Department" in StVars.records_saved[iter8].keys()
+                ):
+                    # Invalidate saved records with invalid "Department" fields:
+                    if (
+                        StVars.records_saved[iter8]["Department"]
+                        not in StVars.valid_departments
+                    ):
+                        StVars.records_saved[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_saved[iter8])
+                        StVars.records_saved.remove(StVars.records_saved[iter8])
+                        # Set the sentinel value if any problems are found:
+                        invalid8 = 1
+            iter8 -= 1
+    if len(StVars.records_temp) > 0:
+        iter8 = len(StVars.records_temp) - 1
+        while iter8 >= 0:
+            # Create a sentinel value to prevent double-processing:
+            invalid8 = 0
+            # Invalidate temp records with missing values:
+            if "" in StVars.records_temp[iter8].values():
+                StVars.records_temp[iter8]["Status"] = "Invalid"
+                StVars.records_invalid.append(StVars.records_temp[iter8])
+                StVars.records_temp.remove(StVars.records_temp[iter8])
+                # Set the sentinel value if any problems are found:
+                invalid8 = 1
+            if invalid8 == 0:
+                # Only apply string invalidation if the validation lists are already defined:
+                if (len(StVars.valid_employees) > 0) and (
+                    "Employee" in StVars.records_temp[iter8].keys()
+                ):
+                    # Invalidate temp records with invalid "Employee" fields:
+                    if (
+                        StVars.records_temp[iter8]["Employee"]
+                        not in StVars.valid_employees
+                    ):
+                        StVars.records_temp[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_temp[iter8])
+                        StVars.records_temp.remove(StVars.records_temp[iter8])
+                        # Set the sentinel value if any problems are found:
+                        invalid8 = 1
+            if invalid8 == 0:
+                # Only apply string invalidation if the validation lists are already defined:
+                if (len(StVars.valid_locations) > 0) and (
+                    "Location" in StVars.records_temp[iter8].keys()
+                ):
+                    # Invalidate temp records with invalid "Location" fields:
+                    if (
+                        StVars.records_temp[iter8]["Location"]
+                        not in StVars.valid_locations
+                    ):
+                        StVars.records_temp[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_temp[iter8])
+                        StVars.records_temp.remove(StVars.records_temp[iter8])
+                        # Set the sentinel value if any problems are found:
+                        invalid8 = 1
+            if invalid8 == 0:
+                # Only apply string invalidation if the validation lists are already defined:
+                if (len(StVars.valid_departments) > 0) and (
+                    "Department" in StVars.records_temp[iter8].keys()
+                ):
+                    # Invalidate temp records with invalid "Department" fields:
+                    if (
+                        StVars.records_temp[iter8]["Department"]
+                        not in StVars.valid_departments
+                    ):
+                        StVars.records_temp[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_temp[iter8])
+                        StVars.records_temp.remove(StVars.records_temp[iter8])
+                        # Set the sentinel value if any problems are found:
+                        invalid8 = 1
+            iter8 -= 1
+    # Check the invalid records list last to ensure that everything there is supposed to be there:
+    if len(StVars.records_invalid) > 0:
+        # Iterate from the bottom up to prevent indexing errors:
+        iter8 = len(StVars.records_invalid) - 1
+        while iter8 >= 0:
+            # Initialize variables for each field:
+            employee = 0
+            location = 0
+            department = 0
+            # Initialize a comparison variable:
+            total = 0
+            # Only set the "Employee" field's variable if it is being used for validation control:
+            if (
+                len(StVars.valid_employees) > 0
+                and "Employee" in StVars.records_invalid[iter8].keys()
+            ):
+                employee = 1
+            # Only set the "Location" field's variable if it is being used for validation control:
+            if (
+                len(StVars.valid_locations) > 0
+                and "Location" in StVars.records_invalid[iter8].keys()
+            ):
+                location = 1
+            # Only set the "Department" field's variable if it is being used for validation control:
+            if (
+                len(StVars.valid_departments) > 0
+                and "Department" in StVars.records_invalid[iter8].keys()
+            ):
+                department = 1
+            # Check the employee field if it's being used:
+            if employee == 1:
+                if StVars.records_invalid[iter8]["Employee"] in StVars.valid_employees:
+                    total += 1
+            # Check the location field if it's being used:
+            if location == 1:
+                if StVars.records_invalid[iter8]["Location"] in StVars.valid_locations:
+                    total += 1
+            # Check the department field if it's being used:
+            if department == 1:
+                if (
+                    StVars.records_invalid[iter8]["Department"]
+                    in StVars.valid_departments
+                ):
+                    total += 1
+            # If all used fields pass validation AND there aren't any empty fields, turn the invalid record into a temp
+            # record instead:
+            if (total == (employee + location + department)) and (
+                "" not in list(StVars.records_invalid[iter8].values())
+            ):
+                StVars.records_invalid[iter8]["Status"] = "Temporary"
+                StVars.records_temp.append(StVars.records_invalid[iter8])
+                StVars.records_invalid.remove(StVars.records_invalid[iter8])
+            iter8 -= 1
 
 
 # Updated: All good for now.
@@ -1563,7 +2173,7 @@ def validate_temp():
     Processes every individual record in the temp record list after importing to ensure they meet the requirements of
     the program. This may include combining similar keys (such as "Date" and "Time" into "Timestamp"), renaming keys to
     match existing records, checking user-defined validation strings to locate misspelled or incorrect names, locations,
-    or product categories, etc.
+    or departments, etc.
 
     Args: None
     Raises: None
@@ -1572,9 +2182,9 @@ def validate_temp():
     # Define a dummy list for safer modification:
     data_loaded = list()
     # Loop through all records to ensure they are uniform in formatting:
-    while len(stvars.records_temp) > 0:
-        data_loaded.append(stvars.records_temp[0])
-        stvars.records_temp.remove(stvars.records_temp[0])
+    while len(StVars.records_temp) > 0:
+        data_loaded.append(StVars.records_temp[0])
+        StVars.records_temp.remove(StVars.records_temp[0])
     for record in data_loaded:
         # If the 'Time' column contains a data type other than Timedelta, convert it to a Timedelta:
         if "Time" in record.keys():
@@ -1650,6 +2260,15 @@ def validate_temp():
             data_loaded = data_loaded.rename({item: "Product"}, axis="columns")
             # Now turn it back into a dictionary list, since it doesn't need to be a DataFrame anymore.
             data_loaded = data_loaded.to_dict(orient="records")
+    # Define a list of acceptable terms for "Department" columns:
+    department_list = ["Product Category", "Category", "Product Type", "Type"]
+    # If any of the list terms are used for column names, replace them with the default "Department":
+    for item in department_list:
+        if item in data_loaded[0].keys():
+            data_loaded = pd.DataFrame.from_records(data_loaded)
+            data_loaded = data_loaded.rename({item: "Department"}, axis="columns")
+            # Now turn it back into a dictionary list, since it doesn't need to be a DataFrame anymore.
+            data_loaded = data_loaded.to_dict(orient="records")
     # Define a list of acceptable terms for "Count" columns:
     count_list = ["Quantity", "Qty", "Units"]
     # If any of the list terms are used for column names, replace them with the default "Count":
@@ -1706,23 +2325,24 @@ def validate_temp():
         if "Total" in record.keys():
             if type(record["Total"]) != str:
                 record["Total"] = round(record["Total"], 2)
-    # Ensure the data is sorted by timestamp, from oldest to most recent:
+    # Ensure the data is sorted by its first column, from oldest to most recent:
     # * Note that 'reverse' defaults to False, so this isn't actually needed, but I'm leaving it there anyway.
-    if "Timestamp" in data_loaded[0].keys():
-        data_loaded.sort(key=lambda d: d["Timestamp"], reverse=False)
+    if len(data_loaded) > 0:
+        heading = list(data_loaded[0].keys())[0]
+        data_loaded.sort(key=lambda d: (d[heading] == "", d[heading]), reverse=False)
     # Check to make sure the record isn't already loaded in a different list:
     iter8 = 0
     record = 0
     while record < len(data_loaded):
         rec = 0
-        while rec < len(stvars.records_master):
+        while rec < len(StVars.records_master):
             # Define a list of keys used in the record:
             keys = list(data_loaded[record].keys())
             # Remove the 'Status' key from the comparison list (because they WON'T match):
             keys.remove(keys[len(keys) - 1])
-            # Now compare the key values from 'data_loaded' with the key values from 'stvars.records_master':
+            # Now compare the key values from 'data_loaded' with the key values from 'StVars.records_master':
             if all(
-                data_loaded[record].get(key) == stvars.records_master[rec].get(key)
+                data_loaded[record].get(key) == StVars.records_master[rec].get(key)
                 for key in keys
             ):
                 # If they match, exclude the record and increment the exclusion counter:
@@ -1730,9 +2350,9 @@ def validate_temp():
                 iter8 += 1
             rec += 1
         # Now make sure the record didn't have a duplicate in the source file:
-        while rec < len(stvars.records_temp):
+        while rec < len(StVars.records_temp):
             # In this case, the 'Status' keys would be the same, so we can just compare the entire dictionary:
-            if data_loaded[record] == stvars.records_temp[rec]:
+            if data_loaded[record] == StVars.records_temp[rec]:
                 # Again, if there's a match, exclude it from import and increment the exclusion counter.
                 data_loaded.remove(data_loaded[record])
                 iter8 += 1
@@ -1741,51 +2361,61 @@ def validate_temp():
     if iter8 > 0:
         # Send any exclusion records to the Datalog along with a popup.
         log_msg(msg=(str(iter8) + " duplicate records were excluded from import."))
-    # Move the records from the validation list into 'stvars.records_temp' for persistent storage:
+    # Move the records from the validation list into 'StVars.records_temp' for persistent storage:
     iter8 = 0
     invalid8 = 0
     while len(data_loaded) > 0:
         # If records contain empty cells, place them in the invalid records list:
         if "" in data_loaded[0].values():
             data_loaded[0]["Status"] = "Invalid"
-            stvars.records_invalid.append(data_loaded[0])
+            StVars.records_invalid.append(data_loaded[0])
             data_loaded.remove(data_loaded[0])
             # Count the number of invalid record imports:
             invalid8 += 1
         # Otherwise, add them to the temp records list:
         else:
-            stvars.records_temp.append(data_loaded[0])
+            StVars.records_temp.append(data_loaded[0])
             data_loaded.remove(data_loaded[0])
             # Count the number of successful record imports:
             iter8 += 1
     # Send a grammatically correct count of successful and invalid records to the Datalog along with a popup:
     if (iter8 > 0) or (invalid8 > 0):
         if (iter8 > 1) and (invalid8 > 1):
-            log_msg(msg=(
-                str(iter8)
-                + " valid records and "
-                + str(invalid8)
-                + " invalid records were successfully imported."
-            ))
+            log_msg(
+                msg=(
+                    str(iter8)
+                    + " valid records and "
+                    + str(invalid8)
+                    + " invalid records were successfully imported."
+                )
+            )
         elif (iter8 > 1) and (invalid8 == 1):
-            log_msg(msg=(
-                str(iter8)
-                + " valid records and 1 invalid record were successfully imported."
-            ))
+            log_msg(
+                msg=(
+                    str(iter8)
+                    + " valid records and 1 invalid record were successfully imported."
+                )
+            )
         elif (iter8 == 1) and (invalid8 > 1):
-            log_msg(msg=(
-                "1 valid record and "
-                + str(invalid8)
-                + " invalid records were successfully imported."
-            ))
+            log_msg(
+                msg=(
+                    "1 valid record and "
+                    + str(invalid8)
+                    + " invalid records were successfully imported."
+                )
+            )
         elif (iter8 == 1) and (invalid8 == 1):
-            log_msg(msg=("1 valid record and 1 invalid record were successfully imported."))
+            log_msg(
+                msg=("1 valid record and 1 invalid record were successfully imported.")
+            )
         elif (iter8 > 1) and (invalid8 == 0):
             log_msg(msg=(str(iter8) + " valid records were successfully imported."))
         elif (iter8 == 1) and (invalid8 == 0):
             log_msg(msg=("1 valid record was successfully imported."))
         elif (iter8 == 0) and (invalid8 > 1):
-            log_msg(msg=(str(invalid8) + " invalid records were successfully imported."))
+            log_msg(
+                msg=(str(invalid8) + " invalid records were successfully imported.")
+            )
         elif (iter8 == 0) and (invalid8 == 1):
             log_msg(msg=("1 invalid record was successfully imported."))
     # Refresh the viewport table and log the number of records currently loaded.
@@ -1802,8 +2432,8 @@ def write_file(path: str):
     Raises: None
     Returns: None
     """
-    # Create a 'pandas' DataFrame object from the records in 'stvars.records_saved':
-    data_frame = pd.DataFrame(stvars.records_saved)
+    # Create a 'pandas' DataFrame object from the records in 'StVars.records_saved':
+    data_frame = pd.DataFrame(StVars.records_saved)
     # Remove the "Status" column from the DataFrame:
     data_frame = data_frame.drop(columns="Status")
     if path.split(".")[-1] == "csv":
@@ -1825,6 +2455,12 @@ def write_file(path: str):
     else:
         # Write the DataFrame to disk in XLSX format:
         data_frame.to_excel(path, float_format="%.2f", index=False)
+    if len(StVars.records_saved) > 1:
+        log_msg(
+            str(len(StVars.records_saved)) + ' records were exported to "' + path + '"'
+        )
+    else:
+        log_msg('1 record was exported to "' + path + '"')
 
 
 # HEADLINE: Object Definitions
@@ -1841,6 +2477,10 @@ root.title("SalesTrax")
 root.state("zoomed")
 # Redirect the "X" button to perform exit functions prior to closing the program:
 root.protocol("WM_DELETE_WINDOW", func=exit_functions)
+# Store the width of the main monitor:
+StVars.monitor_width = root.winfo_screenwidth()
+# Store the height of the main monitor:
+StVars.monitor_height = root.winfo_screenheight()
 
 # Section: Menu-driven checkbox toggles
 # Updated: All good for now.
@@ -1925,9 +2565,15 @@ view_menu.add_checkbutton(
 menu_bar.add_cascade(label="View", menu=view_menu)
 # Define the "Lists" menu and its commands:
 list_menu = tk.Menu(menu_bar, tearoff=0)
-list_menu.add_command(label="Employees", command=log_msg)
-list_menu.add_command(label="Locations", command=log_msg)
-list_menu.add_command(label="Product Categories", command=log_msg)
+list_menu.add_command(
+    label="Employees", command=lambda: toggle_notebook(state=True, tab="employees")
+)
+list_menu.add_command(
+    label="Locations", command=lambda: toggle_notebook(state=True, tab="locations")
+)
+list_menu.add_command(
+    label="Departments", command=lambda: toggle_notebook(state=True, tab="departments")
+)
 # Finalize the contents of the "Lists" menu:
 menu_bar.add_cascade(label="Lists", menu=list_menu)
 # Define the "Generate" menu and its commands:
@@ -1964,7 +2610,7 @@ img_hide_invalid = ImageTk.PhotoImage(Image.open("Images/20/hide_invalid.png"))
 img_hide_deleted = ImageTk.PhotoImage(Image.open("Images/20/hide_deleted.png"))
 img_employee = ImageTk.PhotoImage(Image.open("Images/20/employees.png"))
 img_location = ImageTk.PhotoImage(Image.open("Images/20/locations.png"))
-img_category = ImageTk.PhotoImage(Image.open("Images/20/categories.png"))
+img_department = ImageTk.PhotoImage(Image.open("Images/20/departments.png"))
 img_filter = ImageTk.PhotoImage(Image.open("Images/20/filter.png"))
 img_line = ImageTk.PhotoImage(Image.open("Images/20/chart_line.png"))
 img_bar = ImageTk.PhotoImage(Image.open("Images/20/chart_bar.png"))
@@ -2022,9 +2668,21 @@ btn_hide_deleted = tk.Button(
 btn_filter = tk.Button(
     shortcut_bar, image=img_filter, state="disabled", command=toggle_filter
 )
-btn_employee = tk.Button(shortcut_bar, image=img_employee, command=log_msg)
-btn_location = tk.Button(shortcut_bar, image=img_location, command=log_msg)
-btn_category = tk.Button(shortcut_bar, image=img_category, command=log_msg)
+btn_employee = tk.Button(
+    shortcut_bar,
+    image=img_employee,
+    command=lambda: toggle_notebook(state=True, tab="employees"),
+)
+btn_location = tk.Button(
+    shortcut_bar,
+    image=img_location,
+    command=lambda: toggle_notebook(state=True, tab="locations"),
+)
+btn_department = tk.Button(
+    shortcut_bar,
+    image=img_department,
+    command=lambda: toggle_notebook(state=True, tab="departments"),
+)
 btn_line = tk.Button(shortcut_bar, image=img_line, state="disabled", command=log_msg)
 btn_bar = tk.Button(shortcut_bar, image=img_bar, state="disabled", command=log_msg)
 btn_pie = tk.Button(shortcut_bar, image=img_pie, state="disabled", command=log_msg)
@@ -2033,7 +2691,7 @@ btn_help = tk.Button(shortcut_bar, image=img_help, command=log_msg)
 btn_logo = tk.Button(
     shortcut_bar,
     image=img_logo,
-    text="SalesTrax v0.1.2 ",
+    text="SalesTrax v0.1.3 ",
     font='"consolas" 12 italic bold',
     fg="gray",
     activebackground="black",
@@ -2059,7 +2717,7 @@ btn_hide_deleted.pack(side="left", padx=1, pady=2)
 btn_filter.pack(side="left", padx=(1, 8), pady=2)
 btn_employee.pack(side="left", padx=(8, 1), pady=2)
 btn_location.pack(side="left", padx=1, pady=2)
-btn_category.pack(side="left", padx=(1, 8), pady=2)
+btn_department.pack(side="left", padx=(1, 8), pady=2)
 btn_line.pack(side="left", padx=(8, 1), pady=2)
 btn_bar.pack(side="left", padx=1, pady=2)
 btn_pie.pack(side="left", padx=(1, 8), pady=2)
@@ -2080,7 +2738,7 @@ ToolTip(btn_hide_deleted, msg="Hide Deleted Records", delay=0.2, follow=True)
 ToolTip(btn_filter, msg="Toggle Filter...", delay=0.2, follow=True)
 ToolTip(btn_employee, msg="Employee List", delay=0.2, follow=True)
 ToolTip(btn_location, msg="Location List", delay=0.2, follow=True)
-ToolTip(btn_category, msg="Product Category List", delay=0.2, follow=True)
+ToolTip(btn_department, msg="Department List", delay=0.2, follow=True)
 ToolTip(btn_line, msg="Generate Line Chart", delay=0.2, follow=True)
 ToolTip(btn_bar, msg="Generate Bar Chart", delay=0.2, follow=True)
 ToolTip(btn_pie, msg="Generate Pie Chart", delay=0.2, follow=True)
@@ -2110,7 +2768,6 @@ base_tree.bind("<Button-1>", func=tree_click)
 base_tree.bind("<Motion>", func=disable_resize_cursor)
 
 # Section: Status bar
-# Incomplete: Replace status bar content with something actually useful.
 # Define status bar frame:
 status_bar = tk.Frame(root)
 # Add a filename display to the status bar:
@@ -2160,9 +2817,253 @@ scroll_log.pack(side="right", fill="y")
 # Disable the user's ability to write to the Datalog themselves:
 datalog_body.configure(yscrollcommand=scroll_log.set, state="disabled")
 
+# Section: Validation Control window
+# Define Validation Control window:
+val_control = tk.Toplevel(root)
+# Set the size and position of the window:
+val_control.geometry(
+    "500x400+"
+    + str(int((StVars.monitor_width / 2) - 300))
+    + "+"
+    + str(int((StVars.monitor_height / 2) - 250))
+)
+# Set the contents of the window's title bar:
+val_control.title("Validation Control")
+val_control.iconbitmap("Images/salestrax_icon_bw.ico")
+# Disable the minimize and maximize buttons by setting Validation Control as a toolwindow:
+val_control.attributes("-toolwindow", True)
+# Set the "X" button to withdraw the window instead of closing it:
+val_control.protocol("WM_DELETE_WINDOW", toggle_notebook)
+# Validation Control should be withdrawn by default:
+val_control.withdraw()
+# Define the base notebook for the Validation Control tabs:
+val_notebook = ttk.Notebook(val_control)
+# Define each tab as a Frame object:
+employees_tab = tk.Frame(val_notebook)
+locations_tab = tk.Frame(val_notebook)
+departments_tab = tk.Frame(val_notebook)
+# Add the tabs to the notebook:
+val_notebook.add(employees_tab, text="Employees")
+val_notebook.add(locations_tab, text="Locations")
+val_notebook.add(departments_tab, text="Departments")
+
+# Add an empty listbox to the "Employees" tab:
+employees_box = tk.Listbox(employees_tab, height=18)
+# Define a vertical scrollbar for the listbox:
+employees_scroll = ttk.Scrollbar(
+    employees_box, orient="vertical", command=employees_box.yview, cursor="arrow"
+)
+# Assign y-scrolling to the scrollbar:
+employees_box.configure(yscrollcommand=employees_scroll.set)
+# Define a container to hold the entry fields and buttons:
+employees_frame_a = tk.Frame(employees_tab)
+# Define a sub-container for the entry fields only:
+employees_frame_b = tk.Frame(employees_frame_a)
+# Define a sub-container for the buttons only:
+employees_frame_c = tk.Frame(employees_frame_a)
+# Define the active entry widget for manual entry:
+employees_entry = tk.Entry(employees_frame_a, width=36)
+# Define the read-only entry widget for selections:
+employees_selection = tk.Entry(employees_frame_a, width=36, state="readonly")
+# Define the "Add New Entry" button:
+employees_add = tk.Button(
+    employees_frame_c,
+    text="Add New Entry",
+    state="disabled",
+    command=lambda: [
+        StVars.valid_employees.append(employees_entry.get()),
+        employees_entry.delete(0, "end"),
+        refresh_lists(),
+    ],
+)
+# Define the "Auto-Populate" button:
+employees_auto = tk.Button(
+    employees_frame_c,
+    text="Auto-Populate",
+    state="disabled",
+    command=lambda: pop_listbox(tab="Employee"),
+)
+# Define the "Delete Entry" button:
+employees_delete = tk.Button(
+    employees_frame_c,
+    text="Delete Entry",
+    state="disabled",
+    command=lambda: [
+        StVars.valid_employees.remove(
+            StVars.valid_employees[
+                StVars.valid_employees.index(
+                    employees_box.get(employees_box.curselection()[0])
+                )
+            ]
+        ),
+        refresh_lists(),
+        employees_selection.configure(state="normal"),
+        employees_selection.delete(0, "end"),
+        employees_selection.configure(state="disabled"),
+    ],
+)
+
+# Add an empty listbox to the "Locations" tab:
+locations_box = tk.Listbox(locations_tab, height=18)
+# Define a vertical scrollbar for the listbox:
+locations_scroll = ttk.Scrollbar(
+    locations_box, orient="vertical", command=locations_box.yview, cursor="arrow"
+)
+# Assign y-scrolling to the scrollbar:
+locations_box.configure(yscrollcommand=locations_scroll.set)
+# Define a container to hold the entry fields and buttons:
+locations_frame_a = tk.Frame(locations_tab)
+# Define a sub-container for the entry fields only:
+locations_frame_b = tk.Frame(locations_frame_a)
+# Define a sub-container for the buttons only:
+locations_frame_c = tk.Frame(locations_frame_a)
+# Define the active entry widget for manual entry:
+locations_entry = tk.Entry(locations_frame_a, width=36)
+# Define the read-only entry widget for selections:
+locations_selection = tk.Entry(locations_frame_a, width=36, state="readonly")
+# Define the "Add New Entry" button:
+locations_add = tk.Button(
+    locations_frame_c,
+    text="Add New Entry",
+    state="disabled",
+    command=lambda: [
+        StVars.valid_locations.append(locations_entry.get()),
+        locations_entry.delete(0, "end"),
+        refresh_lists(),
+    ],
+)
+# Define the "Auto-Populate" button:
+locations_auto = tk.Button(
+    locations_frame_c,
+    text="Auto-Populate",
+    state="disabled",
+    command=lambda: pop_listbox(tab="Location"),
+)
+# Define the "Delete Entry" button:
+locations_delete = tk.Button(
+    locations_frame_c,
+    text="Delete Entry",
+    state="disabled",
+    command=lambda: [
+        StVars.valid_locations.remove(
+            StVars.valid_locations[
+                StVars.valid_locations.index(
+                    locations_box.get(locations_box.curselection()[0])
+                )
+            ]
+        ),
+        refresh_lists(),
+        locations_selection.configure(state="normal"),
+        locations_selection.delete(0, "end"),
+        locations_selection.configure(state="disabled"),
+    ],
+)
+
+# Add an empty listbox to the "Departments" tab:
+departments_box = tk.Listbox(departments_tab, height=18)
+# Define a vertical scrollbar for the listbox:
+departments_scroll = ttk.Scrollbar(
+    departments_box, orient="vertical", command=departments_box.yview, cursor="arrow"
+)
+# Assign y-scrolling to the scrollbar:
+departments_box.configure(yscrollcommand=departments_scroll.set)
+# Define a container to hold the entry fields and buttons:
+departments_frame_a = tk.Frame(departments_tab)
+# Define a sub-container for the entry fields only:
+departments_frame_b = tk.Frame(departments_frame_a)
+# Define a sub-container for the buttons only:
+departments_frame_c = tk.Frame(departments_frame_a)
+# Define the active entry widget for manual entry:
+departments_entry = tk.Entry(departments_frame_a, width=36)
+# Define the read-only entry widget for selections:
+departments_selection = tk.Entry(departments_frame_a, width=36, state="readonly")
+# Define the "Add New Entry" button:
+departments_add = tk.Button(
+    departments_frame_c,
+    text="Add New Entry",
+    state="disabled",
+    command=lambda: [
+        StVars.valid_departments.append(departments_entry.get()),
+        departments_entry.delete(0, "end"),
+        refresh_lists(),
+    ],
+)
+# Define the "Auto-Populate" button:
+departments_auto = tk.Button(
+    departments_frame_c,
+    text="Auto-Populate",
+    state="disabled",
+    command=lambda: pop_listbox(tab="Department"),
+)
+# Define the "Delete Entry" button:
+departments_delete = tk.Button(
+    departments_frame_c,
+    text="Delete Entry",
+    state="disabled",
+    command=lambda: [
+        StVars.valid_departments.remove(
+            StVars.valid_departments[
+                StVars.valid_departments.index(
+                    departments_box.get(departments_box.curselection()[0])
+                )
+            ]
+        ),
+        refresh_lists(),
+        departments_selection.configure(state="normal"),
+        departments_selection.delete(0, "end"),
+        departments_selection.configure(state="disabled"),
+    ],
+)
+
+val_notebook.pack(expand=1, fill="both")
+employees_box.pack(side="top", fill="both", padx=15, pady=15, expand=True)
+# Assign the scrollbar to the entire right edge of the listbox:
+employees_scroll.pack(side="right", fill="y")
+# Place the containers under the listbox:
+employees_frame_a.pack(side="bottom", fill="x")
+employees_frame_b.pack(side="top", fill="x")
+employees_frame_c.pack(side="bottom", fill="x")
+# Place the employee entry widgets inside the top sub-container:
+employees_entry.pack(side="left", padx=(15, 0), pady=(0, 15))
+employees_selection.pack(side="right", padx=(0, 15), pady=(0, 15))
+# Place the employee modification buttons inside the bottom sub-container:
+employees_add.pack(side="left", ipadx=25, padx=(15, 32), pady=(0, 15))
+employees_auto.pack(side="left", ipadx=25, pady=(0, 15))
+employees_delete.pack(side="right", ipadx=25, padx=(0, 15), pady=(0, 15))
+
+locations_box.pack(side="top", fill="both", padx=15, pady=15, expand=True)
+# Assign the scrollbar to the entire right edge of the listbox:
+locations_scroll.pack(side="right", fill="y")
+# Place the containers under the listbox:
+locations_frame_a.pack(side="bottom", fill="x")
+locations_frame_b.pack(side="top", fill="x")
+locations_frame_c.pack(side="bottom", fill="x")
+# Place the location entry widgets inside the top sub-container:
+locations_entry.pack(side="left", padx=(15, 0), pady=(0, 15))
+locations_selection.pack(side="right", padx=(0, 15), pady=(0, 15))
+# Place the location modification buttons inside the bottom sub-container:
+locations_add.pack(side="left", ipadx=25, padx=(15, 32), pady=(0, 15))
+locations_auto.pack(side="left", ipadx=25, pady=(0, 15))
+locations_delete.pack(side="right", ipadx=25, padx=(0, 15), pady=(0, 15))
+
+departments_box.pack(side="top", fill="both", padx=15, pady=15, expand=True)
+# Assign the scrollbar to the entire right edge of the listbox:
+departments_scroll.pack(side="right", fill="y")
+# Place the containers under the listbox:
+departments_frame_a.pack(side="bottom", fill="x")
+departments_frame_b.pack(side="top", fill="x")
+departments_frame_c.pack(side="bottom", fill="x")
+# Place the department entry widgets inside the top sub-container:
+departments_entry.pack(side="left", padx=(15, 0), pady=(0, 15))
+departments_selection.pack(side="right", padx=(0, 15), pady=(0, 15))
+# Place the department modification buttons inside the bottom sub-container:
+departments_add.pack(side="left", ipadx=25, padx=(15, 32), pady=(0, 15))
+departments_auto.pack(side="left", ipadx=25, pady=(0, 15))
+departments_delete.pack(side="right", ipadx=25, padx=(0, 15), pady=(0, 15))
+
 # Section: Misc objects
 # Define images for popup windows:
-img_question = ImageTk.PhotoImage(Image.open("Images/32/question.png"))
+img_question = ImageTk.PhotoImage(Image.open("Images/48/question.png"))
 # Apply global window theme:
 glb_theme = ttk.Style(root).theme_use("winnative")
 

@@ -115,3 +115,58 @@ v0.1.2 2023-04-22:
 				- 'pop_filter()'
 				- 'reject_selection()'
 				- 'tree_click()'
+v0.1.3 2023-04-26
+	- General description: Bugfixes. Unsaved changes popup. Validation Control functionality.
+	- Detailed description:
+		- Added a Windows standard "Save Changes?" dialog when attempting to quit the program with unsaved changes.
+		- Added basic validation control through the creation of a "Validation Control" window.
+			- This allows users to define custom validation strings for "Employee", "Location", and "Department" fields,
+				such that records with fields that don't match the validation strings will become invalid. This is meant
+				to act as a basic whitelist/blacklist filter.
+		- Changed the appearance of popup windows to be more consistent with Windows standard toplevels.
+		- Fixed three outstanding bugs related to sorting and filtering.
+		- Normalized terminology and variable/object/file names where necessary.
+		- Removed two deprecated resources.
+	- Itemized changes:
+		- Changes to 'main.py':
+			- Additions:
+				- Added column renaming to 'validate_temp()' for variations on "Department" (which was somehow still
+					missing despite being part of the original design documentation--big whoops).
+				- Added 'Isarra (Wikimedia Commons)' to the contributors list for the use of 'Images/20/question.png'.
+				- Added popup to 'exit_functions()' for exporting saved records that have not yet been written to disk.
+				- Added revalidation step in 'refresh_table()' for records that change status via validation control.
+				- Added the following persistent variables to 'StVars':
+					- 'monitor_height': int
+					- 'monitor_width': int
+				- Added the following functions and their documentation:
+					- 'notebook_update()'
+					- 'pop_listbox()'
+					- 'refresh_notebook()'
+					- 'toggle_notebook()'
+					- 'validate_all()'
+				- Added "Validation Control" Toplevel and its components (35 objects in total).
+			- Modifications and corrections:
+				- Changed all instances of "category" to "department", including in object and variable names.
+				- Changed naming of 'stvars' class to 'StVars' to better align with Python's capitalization conventions.
+				- Corrected a sorting mistake in 'pop_filter()' where I forgot that invalid records could be deleted.
+					The special sorting algorithm for invalid records is now applied to 'StVars.records_deleted' too.
+				- Corrected another incorrectly written sorting command in 'pop_filter()' where I tried to sort a single
+					key in a single deleted record rather than the whole deleted records list.
+				- Normalized words in Datalog messages sent by 'commit_all()' to match those from 'commit_selection()'.
+				- Modified default sorting algorithm to use the first column of the source file instead of "Timestamp",
+					so now there are no required columns for imported files (consistency is still required, though).
+				- Modified the appearance of the 'commit_popup()' to better suit the new 'Images/48/question.png'.
+				- Modified toplevel positioning commands using 'root.winfo_screen*' for more accurate monitor geometry.
+				- Redirected 'img_question' to use 'Images/48/question.png'.
+				- Updated all instances of "v0.1.2" to "v0.1.3".
+			- Removals:
+				- Removed outdated to-do comment in "Section: Status bar" (the task was completed in v0.1.1, but the
+					comment was not removed until now--oversight!).
+			- Documentation Changes:
+				- Added missing topline comments for non-list variables in 'StVars' class.
+		- Notable changes to other files:
+			- Added "Detailed Description" section to 'Docs/Changelog.txt', because detailing the changes to the code
+				didn't sufficiently explain what changes were actually made in terms of functionality.
+			- Deprecated 'Images/20/delete_selection.png' and 'Images/20/restore_selection.png'.
+			- Deprecated 'Images/32/question.png' and added 'Images/48/question.png' as a replacement.
+			- Renamed 'Images/20/categories.png' to 'Images/20/departments.png'.
