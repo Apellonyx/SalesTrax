@@ -1,9 +1,9 @@
-# SalesTrax v0.1.2
+# SalesTrax v0.1.3
 
 ---
 
 **Program Name**: SalesTrax  
-**Version**: 0.1.2  
+**Version**: 0.1.3  
 **Status**: Prototype  
 **Created on**: 2023-04-09  
 **Last updated**: 2023-04-26  
