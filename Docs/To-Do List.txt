@@ -23,6 +23,10 @@ And lines beginning with "&" are fully unimplemented.
 #Alt: Link to GitHub Wiki instead. The "Help" menu list already includes this as an option.
 & This would require significantly less coding, resulting in a smaller file size.
 
+#Task: Add "Select All" back to the "Edit" menu cascade and make it functional.
+& Maybe also make an "Invert Selection" option in the "Edit" menu, too.
+& A "Hide Selected" button would be nice, too, as a form of manual filtering that doesn't require status changes.
+
 #Task: Create a question popup asking if the user wants ODS timestamps in string format or as an integer.
 
 #Task: Create a new 'datalog' object and 'log_msg()' function to replace the existing 'message_box()'.
@@ -48,12 +52,20 @@ And lines beginning with "&" are fully unimplemented.
 ^    'save_log()' would write the contents of the 'dataLog' to a plain text file and then clear the widget.
 
 #Task: Add window for user-defined field validation lists.
-& There should only be one Toplevel object that populates itself depending on the validation list chosen.
-&	Employee Names
-&	Business Locations
-&	Product Categories
+^ There should only be one Toplevel object that populates itself depending on the validation list chosen.
+^	Employee Names
+^	Business Locations
+^	Product Categories
 & Add spell-checking functionality to user validation lists.
 &	Look up and test the 'difflib' library's 'get_close_matches' function to find near-matches when they exist.
 &	When the program encounters a value that isn't in the validation list for that field, run the spell-checker.
 &	If it finds a near-match in the relevant list, display a popup asking if the field should be corrected.
 &	Make the spell-checking function opt-in for the user with a checkbox in each validation list window.
+
+#Task: Create mathematical validation algorithm.
+& If 'Cost', 'Quantity', and 'Total' columns are all present, auto-calculate the expected value for 'Total':
+&	If incorrect, correct it.
+& If 'Cost', 'Quantity', and 'Total' columns are present, AND only one of the three cells is empty:
+&	Auto-calculate the missing value based on the present values.
+& If 'Cost' and 'Quantity' columns are present, but the 'Total' column is missing, create 'Total' and auto-fill it.
+& Do the same as above for any other combination of 'Cost', 'Quantity', and 'Total', where only one is missing.

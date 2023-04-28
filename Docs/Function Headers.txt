@@ -13,50 +13,38 @@ Lines beginning with "<<" are placeholder functions with no documentation.
 
 -----
 
+^ bar_definition():
+    Opens a window for selecting the requirements for generating and viewing bar charts.
+
+^ bar_generation(x: str, y: str, chart, bar):
+    Populates the "Bar Chart" window viewport with a bar chart as defined in 'bar_definition()'.
+
+    Args:
+        x (str): The name of the table column to use for the x-axis.
+        y (str): The name of the table column to use for the y-axis.
+        chart (_type_): The parent widget in which to place the bar chart.
+        bar (_type_): The parent widget in which to place the 'matplotlib' toolbar.
+
 ^ check_temp_count():
     Check that 'records_temp' is empty before attempting to load a file.
-
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ clear_all_data():
     Clears all loaded data from all persistent lists EXCEPT 'datalog_msgs'. It allows the user to continue using the
     program to work on another document set without needing to close the program to do so.
 
-    Args: None
-    Raises: None
-    Returns: None
-
 ^ clear_table():
     Clears the contents of the primary viewport (typically used for updating the table contents).
 
-    Args: None
-    Raises: None
-    Returns: None
-
 ^ commit_all():
     Moves all temp records from the temp record list into the saved records list.
-
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ commit_popup():
     Displays a top-level popup asking how the user wishes to handle temporary records. Options are: "Commit All",
     "Reject All", and "Review Temporary".
 
-    Args: None
-    Raises: None
-    Returns: None
-
 ^ commit_selection():
     Adds selected temp records to the saved records list and restores deleted records. Supports single and multiple
     selections.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ disable_resize_cursor(event):
     Prevents the resizing cursor graphic by interrupting the default behavior of mouse motion when the mouse is
@@ -64,33 +52,27 @@ Lines beginning with "<<" are placeholder functions with no documentation.
 
     Args:
         event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Motion>' (mouse movement), but
-        it should not be manually declared.
-
+            it should not be manually declared.
     Returns:
-        str: This returns "break" back to the calling event, preventing it from performing its default behavior.
+        (str): This returns "break" back to the calling event, preventing it from performing its default behavior.
 
 ^ do_nothing():
     Literally just does nothing. Used to disable default behavior on things like "Close Window" buttons, etc.
 
-    Args: None
-    Raises: None
-    Returns: None
+^ edit_record(event):
+    Creates a toplevel window for editing existing records.
+
+    Args:
+        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Double-Button-1>' (mouse double
+            left-click), but it should not be manually declared.
 
 ^ exit_functions():
     Postpones exiting the program to perform obligatory exit functions such as saving the Datalog and exporting saved
     records that are yet to be exported.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ export_file():
     This opens the 'Save File As...' dialog to export an Excel, ODS, or CSV file to disk. When successful,
     passes the file info to 'write_file()' for use.
-
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ get_selection(stop_select: bool = False):
     Grabs the contents of the currently selected lines in the viewport table and uses that information to locate the
@@ -100,33 +82,34 @@ Lines beginning with "<<" are placeholder functions with no documentation.
         stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the record's
             list location. When used for record modifications, this should always be set to True, but for purposes that
             don't change the record values, set it to False. Defaults to False.
-
-    Raises: None
     Returns:
-        list: When successful, this returns a list that can be used by another function to locate and access the item
+        (list): When successful, this returns a list that can be used by another function to locate and access the item
             more easily.
 
 ^ hide_toggle():
     Used to set the appearance of toggle buttons used to hide records with a specific status.
 
-    Args: None
-    Raises: None
-    Returns: None
+^ line_definition():
+    Opens a window for selecting the axes for generating and viewing line charts.
+
+^ line_generation(x: str, y: str, chart: tk.Widget, bar: tk.Widget):
+    Populates the "Line Chart" window viewport with a line chart as defined in 'line_definition()'.
+
+    Args:
+        x (str): The name of the table column to use for the x-axis.
+        y (str): The name of the table column to use for the y-axis.
+        chart (_type_): The parent widget in which to place the line chart.
+        bar (_type_): The parent widget in which to place the 'matplotlib' toolbar.
 
 ^ link_to_github():
     Opens a link to the SaleTrax repository on GitHub.
     
-    Args: None
-    Raises: None
-    Returns: None
+    Args:
+        page (str): Specific GitHub navigation information (e.g. "issues/", "wiki/", etc.). Defaults to "".
 
 ^ load_file():
     This opens the file select dialog to load an Excel, ODS, or CSV file from disk. When successful, passes this file
     to 'pop_temp()' for use.
-
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ log_msg(msg: str = "This event is not functional yet.", popup: bool = True):
     Logs changes to the record lists in the Datalog. Optionally displays a top-level messagebox to the user with the
@@ -135,15 +118,9 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Args:
         msg (str, optional): Message to record in the Datalog. Defaults to "This event is not functional yet."
         popup (bool, optional): If True, display a top-level messagebox with the message contents. Defaults to True.
-    Raises: None
-    Returns: None
 
 ^ notebook_update():
     Updates the Validation Control window on a 100 ms loop whenever the window is open.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ pop_filter(clear: bool = False):
     This populates the filtered record list based on active filters and sorting options, with optional stacking.
@@ -158,8 +135,6 @@ Lines beginning with "<<" are placeholder functions with no documentation.
 
     Args:
         tab (str): The name of the tab to populate ("Employee", "Location", or "Department").
-    Raises: None
-    Returns: None
 
 ^ pop_master(send_log: bool = False):
     This clears the current master record list and repopulates it with data from the saved, deleted, invalid, and temp
@@ -168,32 +143,20 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Args:
         send_log (bool, optional): When True, a Datalog entry is sent to 'log_msg' containing an updated total record
             count. Note that this does NOT result in a popup, only a log entry. Defaults to False.
-    Raises: None
-    Returns: None
 
 ^ pop_temp(path: str):
     Converts a tabular source document into a list of dictionaries for the program to work from.
 
     Args:
         path (str): The file path to the source document.
-    Raises: None
-    Returns: None
 
 ^ pop_table():
     Populates the viewport table (Treeview widget) with data. If any filter or sort is active, it will populate with
     the contents of the filtered record list; otherwise, it will populate with the contents of the master record list.
 
-    Args: None
-    Raises: None
-    Returns: None
-
 ^ refresh_lists():
     Sorts validation lists, and removes any duplicate entries, and refreshes the listboxes in the "Validation Control"
     window.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ refresh_table(repop_table: bool = True, master_log: bool = False):
     Clears the contents of the viewport table, refreshes the contents of the master and filtered record lists, and then
@@ -204,40 +167,22 @@ Lines beginning with "<<" are placeholder functions with no documentation.
             simply clearing the table. Defaults to True.
         master_log (bool, optional): Whether to send a Datalog message when repopulating the master record list. Set
             this to True when performing record modifications. Defaults to False.
-    Raises: None
-    Returns: None
 
 ^ reject_all():
     Rejects all temporary records in one batch action.
 
-    Args: None
-    Raises: None
-    Returns: None
-
 ^ reject_selection():
     Deletes the selected temp, saved, and invalid records, excluding them from export. Supports single and multiple
     selections.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ root_update():
     A recreation of a traditional main loop run every 100 ms, written as a partial redirection of the 'mainloop()'
     function from 'tkinter' to allow custom actions to be defined in this file without overriding 'mainloop'.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ save_log():
     Saves the contents of 'datalog_msgs' to a text file in the user's "My Documents/SalesTrax/Datalog" folder and clears
     the contents of 'datalog_msgs'. Log files are appended with the date in "YYYY-MM-DD" format and an iterative 3-digit
     index number that allows multiple logs to be saved on the same date without overwriting any earlier logs.
-    
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ select_toggle(state: bool):
     Enables and disables menu options, shortcut buttons, and keybindings based on the record status of the currently
@@ -245,8 +190,6 @@ Lines beginning with "<<" are placeholder functions with no documentation.
 
     Args:
         state (bool): True when a row is selected, False when no row is selected.
-    Raises: None
-    Returns: None
 
 ^ toggle_datalog(state: bool = False):
     Handles the visibility of the Datalog window. Technically speaking, it does not actually close when SalesTrax is
@@ -254,15 +197,9 @@ Lines beginning with "<<" are placeholder functions with no documentation.
 
     Args:
         state (bool, optional): When True, the Datalog becomes visible, and when False, it is hidden. Defaults to False.
-    Raises: None
-    Returns: None
 
 ^ toggle_filter():
     This turns off all active filters and toggles when the user invokes it.
-
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ tree_click(event):
     This determines which area of the Treeview object was clicked to determine which action it takes. If a separator was
@@ -271,17 +208,19 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     Args:
         event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Button-1>' (mouse left-click), but
         it should not be manually declared.
-
     Returns:
-        str: This returns "break" back to the calling event, preventing it from performing its default behavior.
+        (str): This returns "break" back to the calling event, preventing it from performing its default behavior.
+
+^ update_record(record: dict, values: list):
+    Performs direct record modifications based on criteria defined in 'edit_record()'.
+
+    Args:
+        record (dict): The record list address of the record to be modified. Note: This is an object reference.
+        values (list): The new values to use in the record modification. Note: This is a list of object references.
 
 ^ validate_all():
     Iterates through the composite record lists to ensure their status hasn't been changed by validation control.
     Redistributes any records that have changed status according to their new status.
-
-    Args: None
-    Raises: None
-    Returns: None
 
 ^ validate_temp():
     Processes every individual record in the temp record list after importing to ensure they meet the requirements of
@@ -289,14 +228,8 @@ Lines beginning with "<<" are placeholder functions with no documentation.
     match existing records, checking user-defined validation strings to locate misspelled or incorrect names, locations,
     or departments, etc.
 
-    Args: None
-    Raises: None
-    Returns: None
-
 & write_file(path: str):
     Writes all records with "Saved" status to a CSV, ODS, or XLSX file.
 
     Args:
         path (str): The filename and location of the new/updated file.
-    Raises: None
-    Returns: None
