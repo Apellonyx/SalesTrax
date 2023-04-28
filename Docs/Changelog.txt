@@ -1,4 +1,4 @@
-v0.1.4 2023-04-26
+v0.1.4 2023-04-28
 	- General description: Line and bar charts. Record editing. Help links.
 	- Detailed description:
 		- Added basic line chart generation with user-defined x-axis and y-axis assignment.
