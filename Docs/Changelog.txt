@@ -1,3 +1,45 @@
+v0.1.5 2023-04-30
+	- General description: Total bar added. ODS compat fixes.
+	- Detailed description:
+		- Added "Total Bar" just above the status bar to track the sums of all visible numeric fields per column.
+		- Fixed ODS files to only be readable and writeable with 'odfpy' installed.
+	- Itemized changes:
+		- Changes to 'main.py':
+			- Additions:
+				- Added checks in 'export_file()' and 'load_file()' for a user installation of the 'odfpy' module.
+					- If 'odfpy' is not installed, '.ods' reading and writing is disabled.
+					- The 'StVars.odf_installed' boolean is set in a new section, titled "Misc initializations".
+				- Added sections to 'pop_filter()' and 'pop_master()' for calculating the field totals in the total bar.
+				- Added the following persistent objects:
+					- 'btm_container'
+					- 'total_bar'
+				- Added the following persistent variables to 'StVars' class:
+					- 'odf_installed': bool
+					- 'total_refs': list
+					- 'total_values': list
+			- Modifications and corrections:
+				- Corrected a bug in 'commit_selection()' and 'reject_selection()' where an indexing error exception was
+					thrown when modifying the bottom-most record in the table.
+				- Made 'status_bar' a child of the new 'btm_container' object.
+				- Updated all instances of "v0.1.4" to "v0.1.5".
+			- Removals:
+				- None
+			- Documentation Changes:
+				- Cut most of the document header, since it's literally just a word-for-word repeat of the contents
+					of 'readme.md'. Only left the important bits.
+		- New files:
+			- 'requirements.txt' (actually added independently between updates 0.1.4 and 0.1.5)
+		- Notable changes to other files:
+			- 'Docs/Object Hierarchy.txt':
+				- Added and updated all objects added in update 0.1.2 and beyond, because I haven't updated it since
+					I made it in v0.1.1... Yeah, I forgot it existed. Sue me.
+			- 'Docs/To-Do List.txt':
+				- Added a few future tasks planned for the next few updates.
+			- 'readme.md':
+				- Added installation instructions and modified the markdown formatting.
+
+-----
+
 v0.1.4 2023-04-28
 	- General description: Line and bar charts. Record editing. Help links.
 	- Detailed description:

@@ -27,6 +27,27 @@ And lines beginning with "&" are fully unimplemented.
 & Maybe also make an "Invert Selection" option in the "Edit" menu, too.
 & A "Hide Selected" button would be nice, too, as a form of manual filtering that doesn't require status changes.
 
+#Task: Add functionality to the "Toggle Filter..." button when a filter or sort is NOT already active.
+& This should raise a new dialog for modifying filters in a more complete way:
+&	It should have a tab for each column, each containing two listboxes and four buttons:
+&		The left listbox contains whitelisted values for the field:
+&			Everything in that box should be shown in the table.
+&		The right listbox should contain blacklisted values for the field:
+&			Everything in that box should NOT be shown in the table.
+&		The four buttons should handle value movement from one listbox to the other:
+&			">" (move one right), ">>" (move all right), "<<" (move all left), and "<" (move one left)
+& Also add extra functionality when a filter or sort IS already active:
+&	Ask the user if they wish to clear the current filters and sorts or if they wish to modify the existing ones.
+&	If "Clear", simply clear the filters and sorts.
+&	If "Modify", open the "Choose Filter" dialog with any active filters and sorts already in place.
+
+#Task: Combine all chart types into one persistent window.
+& There should be a "Choose Chart Type" entry field.
+& All other fields should auto-generate based on the chosen chart type.
+& "Y-Axis" should be disabled until "X-Axis" is chosen, then auto-populate based on compatible values.
+& There should be checkboxes for including temporary, deleted, and invalid records.
+&	Individual invalid records will still be excluded if their x or y value is invalid.
+
 #Task: Create a question popup asking if the user wants ODS timestamps in string format or as an integer.
 
 #Task: Create a new 'datalog' object and 'log_msg()' function to replace the existing 'message_box()'.

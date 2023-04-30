@@ -11,8 +11,6 @@
 			- "Commit All"
 			- "Reject Selection"
 			- "Reject All"
-			- "Delete Selection"
-			- "Restore Selection"
 		- view_menu
 			- "Hide Saved Records"
 			- "Hide Temporary Records"
@@ -24,15 +22,15 @@
 		- list_menu
 			- "Employees"
 			- "Locations"
-			- "Product Categories"
+			- "Departments"
 		- data_menu
 			- "Line Chart"
 			- "Bar Chart"
 			- "Pie Chart"
 		- help_menu
-			- "User Manual"
+			- "Readme"
 			- "Changelog"
-			- "Online Docs..."
+			- "GitHub Wiki..."
 			- "GitHub Issues..."
 	- sc_bar
 		- btn_import
@@ -58,11 +56,49 @@
 		- btn_logo
 	- base_tree
 		- scroll_tree
-	- status_bar
-		- status_file
-		- status_clock
+	- btm_container
+		- total_bar
+			- StVars.total_refs[] (dynamic content)
+		- status_bar
+			- status_file
+			- status_clock
 	- datalog
 		- datalog_body
 			- scroll_log
+	- val_control
+		- val_notebook
+			- employees_tab
+				- employees_box
+					- employees_scroll
+				- employees_frame_a
+					- employees_frame_b
+						- employees_entry
+						- employees_selection
+					- employees_frame_c
+						- employees_add
+						- employees_auto
+						- employees_delete
+			- locations_tab
+				- locations_box
+					- locations_scroll
+				- locations_frame_a
+					- locations_frame_b
+						- locations_entry
+						- locations_selection
+					- locations_frame_c
+						- locations_add
+						- locations_auto
+						- locations_delete
+			- departments_tab
+				- departments_box
+					- departments_scroll
+				- departments_frame_a
+					- departments_frame_b
+						- departments_entry
+						- departments_selection
+					- departments_frame_c
+						- departments_add
+						- departments_auto
+						- departments_delete
 	- img_question
 	- glb_theme
