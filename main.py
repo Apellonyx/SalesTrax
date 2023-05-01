@@ -1867,7 +1867,7 @@ def pop_master(send_log: bool = False):
             col_total_box = tk.Entry(total_bar)
             index = 0
             # Ensure that empty cells are skipped:
-            while StVars.records_filter[index][keys[box]] == "":
+            while StVars.records_master[index][keys[box]] == "":
                 index += 1
                 # If all cells in the column are empty (all invalid records), just set 'index' back to zero and break
                 # out of the loop.
