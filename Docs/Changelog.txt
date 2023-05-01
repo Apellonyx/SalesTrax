@@ -1,3 +1,45 @@
+v0.1.6 2023-05-01
+	- General description: Refactored chart generation. Validation bugfix.
+	- Detailed description:
+		- Corrected a major validation error that prevented the table from populating without filters or sorts active.
+		- Completely refactored the Chart Generation process.
+		- Improved VS Code mouseover documentation for functions.
+	- Itemized changes:
+		- Changes to 'main.py':
+			- Additions:
+				- Added the following functions and their documentation:
+					- 'chart_generation()'
+					- 'chart_update()'
+					- 'toggle_chart()'
+					- 'update_axes()'
+				- Added the following persistent objects:
+					- 'chart_window' and its children (17 objects in total)
+				- Added the following persistent variables to 'StVars' class:
+					- 'chart_on': bool
+					- 'x_axis_value': str
+			- Modifications and corrections:
+				- Corrected a major validation error in 'pop_master()' where it attempted to check the contents of
+					'StVars.records_filter' instead of 'StVars.records_master', causing the entire table population
+					process to fail when no filters or sorts were selected.
+				- Redirected the buttons and menu options for line and bar graph generation to use the new functions.
+			- Removals:
+				- Deprecated the following functions due to refactoring:
+					- 'bar_definition()'
+					- 'bar_generation()'
+					- 'line_definition()'
+					- 'line_generation()'
+			- Documentation Changes:
+				- Added bullets to function headers with arguments and/or returns for better mouseover documentation
+					formatting in Visual Studio Code.
+		- New files:
+			- None
+		- Notable changes to other files:
+			- 'Docs/Function Headers.txt":
+				- Added bullets to function headers with arguments and/or returns for better mouseover documentation
+					formatting in Visual Studio Code.
+
+-----
+
 v0.1.5 2023-04-30
 	- General description: Total bar added. ODS compat fixes.
 	- Detailed description:

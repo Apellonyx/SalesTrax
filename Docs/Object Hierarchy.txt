@@ -100,5 +100,22 @@
 						- departments_add
 						- departments_auto
 						- departments_delete
+	- chart_window
+		- chart_top_frame
+		- chart_bottom_frame
+			- chart_tool_frame
+			- chart_def_frame
+				- chart_left_frame
+					- chart_type_label
+					- chart_type_combo
+					- chart_x_label
+					- chart_x_combo
+					- chart_m_label
+					- chart_m_combo
+					- chart_y_label
+					- chart_y_combo
+				- chart_right_frame
+					- chart_ok_button
+					- chart_cancel_button
 	- img_question
 	- glb_theme

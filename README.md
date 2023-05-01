@@ -1,12 +1,12 @@
-# SalesTrax v0.1.5
+# SalesTrax v0.1.6
 
 ---
 
 **Program Name**: SalesTrax  
-**Version**: 0.1.5  
+**Version**: 0.1.6  
 **Status**: Prototype  
 **Created on**: 2023-04-09  
-**Last updated**: 2023-04-28  
+**Last updated**: 2023-05-01  
 **Created with**: Python 3.11.2  
 **Author**: Danny Fleenor  
 **Contributors**:
@@ -72,6 +72,12 @@ update, the '.ods' format was still available in the import and export lists as 
 have the required module to read/write that format, but the program would crash if `odfpy` wasn't installed. Now,
 '.ods' won't even appear as a valid file format unless `odfpy` is installed on your system. That's it. Small update,
 I know, but I've been meaning to make those features for too long, and I didn't want to put them off any longer.
+
+As of update 0.1.6, chart generation has been fully refactored to occur within a single window instead of separate
+windows for each chart type. The datatype combination issue from 0.1.4 is also corrected, so the values available for
+the y-axis are dependent upon the value chosen for the x-axis, preventing incompatible pairings. There is also an
+auto-populated combo-box for multiple line or bar groupings, but it is not yet functional (you can still set its
+value without causing errors, but the entire field will be ignored in the actual chart generation process).
 
 As mentioned in the last few updates, PROPER filtering will not be available until a later update, but I'm already
 developing an algorithm for that in a separate testing file. It's just being difficult. Soon™, though!

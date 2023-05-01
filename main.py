@@ -1,6 +1,6 @@
 """
 Program Name: SalesTrax
-Version: 0.1.5
+Version: 0.1.6
 Status: Prototype
 Created on: 2023-04-09
 Last updated: 2023-04-30
@@ -32,11 +32,11 @@ Description:
     content.
 
 NOTES regarding PyCharm:
-    When editing this file in PyCharm, the program will raise a total of 33 warnings and 4 light warnings, none of which
+    When editing this file in PyCharm, the program will raise a total of 34 warnings and 5 light warnings, none of which
     are legitimate problems. I've pointed most of them out in comments where they occur, but I thought I should go ahead
     and mention them here as well. Most of them stem from PyCharm incorrectly recognizing dictionaries as lists, some
     fail to recognize lists as lists, and others warn about direct object references that are intentional. In any case,
-    all 33 warnings and 4 light warning are illegitimate, and attempting to correct them WILL break the program (trust
+    all 34 warnings and 5 light warning are illegitimate, and attempting to correct them WILL break the program (trust
     me, I tried it). Just do your best to ignore them, or better yet, view the file in Visual Studio Code, which doesn't
     throw any warnings at all.
 """
@@ -58,27 +58,29 @@ from tktooltip import ToolTip
 # * global or class definition. I chose class definition, as nearly every source I've found on the topic specifically
 # * warns against global variables in almost all cases.
 class StVars:
-    # Keep a backup of all Datalog messages in iterable format
+    # Keep a backup of all Datalog messages in iterable format:
     datalog_msgs = list()
-    # Saved records; base data list
+    # Saved records; base data list:
     records_saved = list()
-    # Deleted records; base data list
+    # Deleted records; base data list:
     records_deleted = list()
-    # Filtered records from one or more of the base data lists
+    # Filtered records from one or more of the base data lists:
     records_filter = list()
-    # Invalid records; base data list
+    # Invalid records; base data list:
     records_invalid = list()
-    # Unfiltered records from all the base data lists
+    # Unfiltered records from all the base data lists:
     records_master = list()
-    # Temporary records; base data list
+    # Temporary records; base data list:
     records_temp = list()
-    # Validation strings for the 'Department' field
+    # Validation strings for the 'Department' field:
     valid_departments = list()
-    # Validation strings for the 'Employee' field
+    # Validation strings for the 'Employee' field:
     valid_employees = list()
-    # Validation strings for the 'Location' field
+    # Validation strings for the 'Location' field:
     valid_locations = list()
 
+    # Whether the Chart Generation window is visible (used for updating axis lists):
+    chart_on = bool()
     # The path for most recently imported document with temp records still active:
     current_file = str()
     # Whether a filter and/or sort is currently active:
@@ -89,7 +91,7 @@ class StVars:
     monitor_height = int()
     # Whether the Validation Control window is visible (used for updating validation lists):
     notebook_on = bool()
-    # Whether or not 'odfpy' is installed
+    # Whether 'odfpy' is installed:
     odf_installed = bool()
     # The column by which to sort records:
     sort_column = str()
@@ -99,141 +101,47 @@ class StVars:
     total_refs = list()
     # Empty list to store the values of the items inserted into 'total_refs':
     total_values = list()
+    # Stores the column name for the x-axis in the Chart Generation window (used for updates):
+    x_axis_value = str()
 
 
 # HEADLINE: Function definitions
 # Updated: All good for now.
-def bar_definition():
+def chart_generation(chart: str, x: str, y: str):
     """
-    Opens a window for selecting the requirements for generating and viewing bar charts.
-    """
-    # Define the base toplevel:
-    window = tk.Toplevel(root, padx=5, pady=5)
-    # Set the title bar contents:
-    window.title("Bar Chart")
-    window.iconbitmap("Images/salestrax_icon_bw.ico")
-    # Set the window size based on the user's monitor size and center it:
-    window.geometry(
-        (
-            # 70% monitor width:
-            str(int(StVars.monitor_width * 0.7))
-            + "x"
-            # 80% monitor height:
-            + str(int(StVars.monitor_height * 0.8))
-            + "+"
-            # Center horizontally:
-            + str(
-                int((StVars.monitor_width / 2) - ((StVars.monitor_width * 0.35) + 25))
-            )
-            + "+"
-            # Center vertically:
-            + str(
-                int((StVars.monitor_height / 2) - ((StVars.monitor_height * 0.4) + 25))
-            )
-        )
-    )
-    # Define the base layout frames for organizational setup:
-    # Ensure the frame that holds the bar chart is visible even when empty (otherwise, the window looks incomplete):
-    top_frame = tk.Frame(window, bg="white", border=2, relief="groove")
-    bottom_frame = tk.Frame(window)
-    # Define the frames for the 'matplotlib' toolbar and the axis choice area:
-    tool_frame = tk.Frame(bottom_frame)
-    button_frame = tk.Frame(bottom_frame)
-    # Define the frame for the labels and entry boxes:
-    left_frame = tk.Frame(button_frame)
-    # Define the frame for the control buttons:
-    right_frame = tk.Frame(button_frame)
-    # Define the frame for the x-axis label and entry box:
-    x_frame = tk.Frame(left_frame)
-    # Define the frame for the x-axis label and entry box:
-    y_frame = tk.Frame(left_frame)
-    # X-axis label:
-    x_label = tk.Label(x_frame, text="X-Axis")
-    # Combo box for defining the x-axis to use in the bar chart:
-    x_combo = ttk.Combobox(x_frame, values=list(base_tree["columns"]))
-    # Y-axis label:
-    y_label = tk.Label(y_frame, text="Y-Axis")
-    # Combo box for defining the y-axis to use in the bar chart:
-    y_combo = ttk.Combobox(y_frame, values=list(base_tree["columns"]))
-    # Define the "OK" button:
-    ok_button = tk.Button(
-        right_frame,
-        text="OK",
-        width=10,
-        command=lambda: [
-            top_frame.winfo_children()[0].destroy()
-            if len(top_frame.winfo_children()) > 0
-            else do_nothing(),
-            tool_frame.winfo_children()[0].destroy()
-            if len(tool_frame.winfo_children()) > 0
-            else do_nothing(),
-            bar_generation(x_combo.get(), y_combo.get(), top_frame, tool_frame),
-        ]
-        if x_combo.get() != ""
-        and y_combo.get() != ""
-        and x_combo.get() != y_combo.get()
-        and type(StVars.records_master[0][y_combo.get()]) != str
-        else [
-            log_msg("SalesTrax cannot visualize non-numerical data."),
-            window.focus_force(),
-        ],
-    )
-    # Define the "Cancel" button:
-    cancel_button = tk.Button(
-        right_frame, text="Cancel", width=10, command=window.destroy
-    )
-    # Place all the objects in their respective frames:
-    top_frame.pack(side="top", fill="both", expand=True, padx=2, pady=(2, 0))
-    bottom_frame.pack(side="bottom", fill="x")
-    tool_frame.pack(side="left", padx=(10, 0), pady=(0, 80), anchor="nw")
-    button_frame.pack(side="right", anchor="se")
-    left_frame.pack(side="left", padx=(0, 10), pady=(30, 40))
-    right_frame.pack(side="right", padx=(10, 40), pady=(30, 40))
-    x_frame.pack(side="top")
-    y_frame.pack(side="bottom")
-    x_label.pack(side="left")
-    x_combo.pack(side="right")
-    y_label.pack(side="left")
-    y_combo.pack(side="right")
-    ok_button.pack(side="top")
-    cancel_button.pack(side="bottom")
-    # If there is an active sort, auto-populate the x-axis combobox with it:
-    if StVars.sort_column != "":
-        x_combo.set(StVars.sort_column)
-    else:
-        # Otherwise, use "Timestamp", if possible (don't auto-populate the x-axis combobox if no sort or "Timestamp"):
-        if "Timestamp" in list(base_tree["columns"]):
-            x_combo.set("Timestamp")
+    Generates a chart figure based on user-defined constraints named with the 'Chart Generation' window.
 
-
-# Updated: All good for now.
-def bar_generation(x: str, y: str, chart, bar):
-    """
-    Populates the "Bar Chart" window viewport with a bar chart as defined in 'bar_definition()'.
-
-    Args:
-        x (str): The name of the table column to use for the x-axis.
-        y (str): The name of the table column to use for the y-axis.
-        chart (_type_): The parent widget in which to place the bar chart.
-        bar (_type_): The parent widget in which to place the 'matplotlib' toolbar.
+    - Args:
+        - chart (str): The type of chart to generate ("Line Chart" or "Bar Chart").
+        - x (str): The name of the column assigned to the x-axis of the chart.
+        - y (str): The name of the column assigned to the y-axis of the chart.
     """
     # Initialize empty lists to store the x-axis and y-axis data:
     x_data = list()
     y_data = list()
     # Initialize an empty list for bar width definitions:
-    w_data = list()
+    if chart == "Bar Chart":
+        w_data = list()
     # Decide which record list to use:
     # * PyCharm throws a light warning on this line, saying 'list_used' value is not used, even though it absolutely is.
     list_used = list()
     if len(StVars.records_filter) > 0:
-        list_used = StVars.records_filter
+        # Sort the column used for the x-axis to prevent tangled line charts:
+        list_used = sorted(
+            list(StVars.records_filter), key=lambda d: (d[x] == "", d[x])
+        )
     else:
-        list_used = StVars.records_master
-    # Add the values to the appropriate data lists:
+        # Sort the column used for the x-axis to prevent tangled line charts:
+        list_used = sorted(
+            list(StVars.records_master), key=lambda d: (d[x] == "", d[x])
+        )
+    # Add the axis values to the appropriate data lists:
     for record in list_used:
         if record in StVars.records_saved:
+            # Round "Timestamps" to the nearest day to make cleaner charts:
             if x == "Timestamp":
                 x_data.append(pd.Timestamp(record[x]).round(freq="d"))
+            # Round float values down to a whole number to make cleaner charts:
             elif x == "Cost" or x == "Total":
                 x_data.append(int(record[x]))
             else:
@@ -246,19 +154,27 @@ def bar_generation(x: str, y: str, chart, bar):
             # Iterate through the x data in both ascending and descending order simultaneously:
             iter8 = 0
             while iter8 < len(x_data):
+                # Initialize an averaging divisor for "Cost" values:
+                avg_div = 1
                 duplic8 = len(x_data) - 1
                 while duplic8 > iter8:
                     # If a duplicate x-value is found, add its y-value to the first instance's y-value and remove the
                     # second instance from both x and y lists:
                     if x_data[iter8] == x_data[duplic8]:
-                        if y != "Cost":
-                            y_data[iter8] += y_data[duplic8]
+                        # If the y-axis is set to "Cost", average its values instead of summing them:
+                        if y == "Cost":
+                            avg_div += 1
+                        y_data[iter8] += y_data[duplic8]
                         x_data.remove(x_data[duplic8])
                         y_data.remove(y_data[duplic8])
                     duplic8 -= 1
+                # Perform the averaging calculations for "Cost":
+                y_data[iter8] /= avg_div
                 iter8 += 1
         iter8 = 0
-        while iter8 < len(x_data):
+        # Bar charts need a width value in iterable form, so make them all the same:
+        while iter8 < len(x_data) and chart == "Bar Chart":
+            # Charts with a lot of bars should have thinner columns:
             if len(x_data) > 31:
                 w_data.append(0.5)
             else:
@@ -274,25 +190,47 @@ def bar_generation(x: str, y: str, chart, bar):
         )
         # Add a chart to the frame:
         plot = chart_frame.add_subplot()
-        # Plot the data points onto the chart:
-        plot.bar(x=x_data, height=y_data, width=w_data)
-        # plot.plot(x_data, y_data)
-        # Add a light gray grid to the chart:
-        plot.grid(axis="y", color="0.7", linestyle=":")
+        # Plot the correct chart type:
+        if chart == "Line Chart":
+            # Plot the data points onto the chart:
+            plot.plot(x_data, y_data)
+            # Add a light gray grid to the chart:
+            plot.grid(color="0.9")
+        elif chart == "Bar Chart":
+            # Plot the data points onto the chart:
+            plot.bar(x=x_data, height=y_data, width=w_data)
+            # Add a light gray grid to the chart:
+            plot.grid(axis="y", color="0.7", linestyle=":")
         # Minimize the external margins around the chart:
         chart_frame.subplots_adjust(left=0.045, bottom=0.04, right=0.99, top=0.98)
         # Minimize the internal margins on the chart, but leave enough room for long x-labels:
         plot.margins(x=0.025, y=0.05)
         # Assign the chart frame to a 'tkinter'-compatible canvas-type widget:
-        canvas = FigureCanvasTkAgg(chart_frame, master=chart)
+        canvas = FigureCanvasTkAgg(chart_frame, master=chart_top_frame)
         # Draw the chart to the canvas:
         canvas.draw()
         # Define a new instance of the 'matplotlib' toolbar and assign it to the canvas:
-        toolbar = NavigationToolbar2Tk(canvas, bar, pack_toolbar=False)
+        toolbar = NavigationToolbar2Tk(canvas, chart_tool_frame, pack_toolbar=False)
         # Place the canvas inside the "Line Chart" window in its designated frame:
         canvas.get_tk_widget().pack(fill="both", expand=True)
         # Place the toolbar inside the "Line Chart" window in its designated frame:
         toolbar.pack()
+
+
+# Updated: All good for now.
+def chart_update():
+    """
+    Keeps the y-axis and multi-chart combo-boxes compatible with the x-axis chosen in the Chart Generation window.
+    """
+    # Only update the y-axis and multi-chart combo-boxes when the x-axis combo-box value changes:
+    if StVars.x_axis_value != chart_x_combo.get():
+        # Update the value of the x-axis choice:
+        StVars.x_axis_value = chart_x_combo.get()
+        # Update the other combo-boxes:
+        update_axes()
+    # Schedule a recursion of this function if the Chart Generation window is still open:
+    if StVars.chart_on:
+        chart_window.after(100, func=chart_update)
 
 
 # Updated: All good for now.
@@ -609,7 +547,9 @@ def commit_selection():
             else:
                 log_msg("1 invalid record was committed to memory.", popup=False)
             row = 0
-            while row < len(data_address[2]) and data_address[2][row] < len(base_tree.get_children()):
+            while row < len(data_address[2]) and data_address[2][row] < len(
+                base_tree.get_children()
+            ):
                 # Since performing this operation deselects the rows, reselect them:
                 base_tree.selection_add(base_tree.get_children()[data_address[2][row]])
                 row += 1
@@ -624,11 +564,11 @@ def disable_resize_cursor(event):
     Prevents the resizing cursor graphic by interrupting the default behavior of mouse motion when the mouse is
     positioned over a column separator.
 
-    Args:
-        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Motion>' (mouse movement), but
+    - Args:
+        - event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Motion>' (mouse movement), but
             it should not be manually declared.
-    Returns:
-        (str): This returns "break" back to the calling event, preventing it from performing its default behavior.
+    - Returns:
+        - (str): This returns "break" back to the calling event, preventing it from performing its default behavior.
     """
     # Only interrupt mouse behavior if the mouse is positioned over a column header separator:
     if base_tree.identify_region(event.x, event.y) == "separator":
@@ -651,8 +591,8 @@ def edit_record(event):
     """
     Creates a toplevel window for editing existing records.
 
-    Args:
-        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Double-Button-1>' (mouse double
+    - Args:
+        - event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Double-Button-1>' (mouse double
             left-click), but it should not be manually declared.
     """
     # Only perform the function if the user double-clicked a cell in the table:
@@ -878,7 +818,7 @@ def export_file():
     This opens the 'Save File As...' dialog to export an Excel, ODS, or CSV file to disk. When successful, passes the
     file info to 'write_file()' for use.
     """
-    # Define filetypes that are accepted for writing, based on whether or not 'odfpy' is installed:
+    # Define filetypes that are accepted for writing, based on whether 'odfpy' is installed:
     if StVars.odf_installed:
         # With 'odfpy', allow '.ods' exports:
         table_docs = [
@@ -921,13 +861,13 @@ def get_selection(stop_select: bool = False):
     Grabs the contents of the currently selected lines in the viewport table and uses that information to locate the
     records in their respective record lists.
 
-    Args:
-        stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the record's
-            list location. When used for record modifications, this should always be set to True, but for purposes that
-            don't change the record values, set it to False. Defaults to False.
-    Returns:
-        (list): When successful, this returns a list that can be used by another function to locate and access the item
-            more easily.
+    - Args:
+        - stop_select (bool, optional): Whether to clear the row selection on the chosen record when finding the
+            record's list location. When used for record modifications, this should always be set to True, but for
+            purposes that don't change the record values, set it to False. Defaults to False.
+    - Returns:
+        - (list): When successful, this returns a list that can be used by another function to locate and access the
+            item more easily.
     """
     # Ensure that a record is selected at all:
     if len(base_tree.selection()) > 0:
@@ -1123,204 +1063,12 @@ def hide_toggle():
 
 
 # Updated: All good for now.
-def line_definition():
-    """
-    Opens a window for selecting the axes for generating and viewing line charts.
-    """
-    # Define the base toplevel:
-    window = tk.Toplevel(root, padx=5, pady=5)
-    # Set the title bar contents:
-    window.title("Line Chart")
-    window.iconbitmap("Images/salestrax_icon_bw.ico")
-    # Set the window size based on the user's monitor size and center it:
-    window.geometry(
-        (
-            # 70% monitor width:
-            str(int(StVars.monitor_width * 0.7))
-            + "x"
-            # 80% monitor height:
-            + str(int(StVars.monitor_height * 0.8))
-            + "+"
-            # Center horizontally:
-            + str(
-                int((StVars.monitor_width / 2) - ((StVars.monitor_width * 0.35) + 25))
-            )
-            + "+"
-            # Center vertically:
-            + str(
-                int((StVars.monitor_height / 2) - ((StVars.monitor_height * 0.4) + 25))
-            )
-        )
-    )
-    # Define the base layout frames for organizational setup:
-    # Ensure the frame that holds the line chart is visible even when empty (otherwise, the window looks incomplete):
-    top_frame = tk.Frame(window, bg="white", border=2, relief="groove")
-    bottom_frame = tk.Frame(window)
-    # Define the frames for the 'matplotlib' toolbar and the axis choice area:
-    tool_frame = tk.Frame(bottom_frame)
-    button_frame = tk.Frame(bottom_frame)
-    # Define the frame for the labels and entry boxes:
-    left_frame = tk.Frame(button_frame)
-    # Define the frame for the control buttons:
-    right_frame = tk.Frame(button_frame)
-    # Define the frame for the x-axis label and entry box:
-    x_frame = tk.Frame(left_frame)
-    # Define the frame for the x-axis label and entry box:
-    y_frame = tk.Frame(left_frame)
-    # X-axis label:
-    x_label = tk.Label(x_frame, text="X-Axis")
-    # Combo box for defining the x-axis to use in the line chart:
-    x_combo = ttk.Combobox(x_frame, values=list(base_tree["columns"]))
-    # Y-axis label:
-    y_label = tk.Label(y_frame, text="Y-Axis")
-    # Combo box for defining the y-axis to use in the line chart:
-    y_combo = ttk.Combobox(y_frame, values=list(base_tree["columns"]))
-    # Define the "OK" button:
-    ok_button = tk.Button(
-        right_frame,
-        text="OK",
-        width=10,
-        command=lambda: [
-            top_frame.winfo_children()[0].destroy()
-            if len(top_frame.winfo_children()) > 0
-            else do_nothing(),
-            tool_frame.winfo_children()[0].destroy()
-            if len(tool_frame.winfo_children()) > 0
-            else do_nothing(),
-            line_generation(x_combo.get(), y_combo.get(), top_frame, tool_frame),
-        ]
-        if x_combo.get() != ""
-        and y_combo.get() != ""
-        and x_combo.get() != y_combo.get()
-        and type(StVars.records_master[0][y_combo.get()]) != str
-        else [
-            log_msg("SalesTrax cannot visualize non-numerical data."),
-            window.focus_force(),
-        ],
-    )
-    # Define the "Cancel" button:
-    cancel_button = tk.Button(
-        right_frame, text="Cancel", width=10, command=window.destroy
-    )
-    # Place all the objects in their respective frames:
-    top_frame.pack(side="top", fill="both", expand=True, padx=2, pady=(2, 0))
-    bottom_frame.pack(side="bottom", fill="x")
-    tool_frame.pack(side="left", padx=(10, 0), pady=(0, 80), anchor="nw")
-    button_frame.pack(side="right", anchor="se")
-    left_frame.pack(side="left", padx=(0, 10), pady=(30, 40))
-    right_frame.pack(side="right", padx=(10, 40), pady=(30, 40))
-    x_frame.pack(side="top")
-    y_frame.pack(side="bottom")
-    x_label.pack(side="left")
-    x_combo.pack(side="right")
-    y_label.pack(side="left")
-    y_combo.pack(side="right")
-    ok_button.pack(side="top")
-    cancel_button.pack(side="bottom")
-    # If there is an active sort, auto-populate the x-axis combobox with it:
-    if StVars.sort_column != "":
-        x_combo.set(StVars.sort_column)
-    else:
-        # Otherwise, use "Timestamp", if possible (don't auto-populate the x-axis combobox if no sort or "Timestamp"):
-        if "Timestamp" in list(base_tree["columns"]):
-            x_combo.set("Timestamp")
-
-
-# Updated: All good for now.
-def line_generation(x: str, y: str, chart: tk.Widget, bar: tk.Widget):
-    """
-    Populates the "Line Chart" window viewport with a line chart as defined in 'line_definition()'.
-
-    Args:
-        x (str): The name of the table column to use for the x-axis.
-        y (str): The name of the table column to use for the y-axis.
-        chart (_type_): The parent widget in which to place the line chart.
-        bar (_type_): The parent widget in which to place the 'matplotlib' toolbar.
-    """
-    # Initialize empty lists to store the x-axis and y-axis data:
-    x_data = list()
-    y_data = list()
-    # Decide which record list to use:
-    # * As in 'bar_generation()', PyCharm throws a light warning on the next line, claiming that 'list_used' is not used
-    # * when it is very clearly used three times.
-    list_used = list()
-    if len(StVars.records_filter) > 0:
-        list_used = sorted(
-            list(StVars.records_filter), key=lambda d: (d[x] == "", d[x])
-        )
-    else:
-        list_used = sorted(
-            list(StVars.records_master), key=lambda d: (d[x] == "", d[x])
-        )
-    # Add the values to the appropriate data lists:
-    for record in list_used:
-        if record in StVars.records_saved:
-            if x == "Timestamp":
-                x_data.append(pd.Timestamp(record[x]).round(freq="d"))
-            elif x == "Cost" or x == "Total":
-                x_data.append(int(record[x]))
-            else:
-                x_data.append(record[x])
-            y_data.append(record[y])
-    # Stop processing if there was no data:
-    if len(x_data) > 0:
-        # When working with numerical data, collect sums instead of individual data points:
-        if type(y_data[0]) == float or type(y_data[0]) == int:
-            # Iterate through the x data in both ascending and descending order simultaneously:
-            iter8 = 0
-            while iter8 < len(x_data):
-                duplic8 = len(x_data) - 1
-                avg_div = 1
-                while duplic8 > iter8:
-                    # If a duplicate x-value is found, add its y-value to the first instance's y-value and remove the
-                    # second instance from both x and y lists:
-                    if x_data[iter8] == x_data[duplic8]:
-                        # When y is "Cost", average the cost instead of summing it:
-                        if y == "Cost":
-                            avg_div += 1
-                        y_data[iter8] += y_data[duplic8]
-                        x_data.remove(x_data[duplic8])
-                        y_data.remove(y_data[duplic8])
-                    duplic8 -= 1
-                y_data[iter8] /= avg_div
-                iter8 += 1
-        # Define a blank canvas on which to draw the line chart, ~65% of the monitor's height and width:
-        chart_frame = Figure(
-            figsize=(
-                root.winfo_screenmmwidth() * 0.025,
-                root.winfo_screenmmheight() * 0.025,
-            ),
-            dpi=90,
-        )
-        # Add a chart to the frame:
-        plot = chart_frame.add_subplot()
-        # Plot the data points onto the chart:
-        plot.plot(x_data, y_data)
-        # Add a light gray grid to the chart:
-        plot.grid(color="0.9")
-        # Minimize the external margins around the chart:
-        chart_frame.subplots_adjust(left=0.045, bottom=0.04, right=0.99, top=0.98)
-        # Minimize the internal margins on the chart, but leave enough room for long x-labels:
-        plot.margins(x=0.025, y=0.05)
-        # Assign the chart frame to a 'tkinter'-compatible canvas-type widget:
-        canvas = FigureCanvasTkAgg(chart_frame, master=chart)
-        # Draw the chart to the canvas:
-        canvas.draw()
-        # Define a new instance of the 'matplotlib' toolbar and assign it to the canvas:
-        toolbar = NavigationToolbar2Tk(canvas, bar, pack_toolbar=False)
-        # Place the canvas inside the "Line Chart" window in its designated frame:
-        canvas.get_tk_widget().pack(fill="both", expand=True)
-        # Place the toolbar inside the "Line Chart" window in its designated frame:
-        toolbar.pack()
-
-
-# Updated: All good for now.
 def link_to_github(page: str = ""):
     """
     Opens a link to the SaleTrax repository on GitHub.
 
-    Args:
-        page (str): Specific GitHub navigation information (e.g. "issues/", "wiki/", etc.). Defaults to "".
+    - Args:
+        - page (str): Specific GitHub navigation information (e.g. "issues/", "wiki/", etc.). Defaults to "".
     """
     # Define the page link:
     url = "https://www.github.com/Apellonyx/salestrax/" + page
@@ -1334,7 +1082,7 @@ def load_file():
     This opens the file select dialog to load an Excel, ODS, or CSV file from disk. When successful, passes this file
     to 'pop_temp()' for use.
     """
-    # Define filetypes that are accepted for reading, based on whether or not 'odfpy' is installed:
+    # Define filetypes that are accepted for reading, based on whether 'odfpy' is installed:
     if StVars.odf_installed:
         table_docs = [
             ("All Supported", "*.csv;*.ods;*.xls;*.xlsb;*.xlsm;*.xlsx"),
@@ -1372,9 +1120,9 @@ def log_msg(msg: str = "This event is not functional yet.", popup: bool = True):
     Logs changes to the record lists in the Datalog. Optionally displays a top-level messagebox to the user with the
     same message.
 
-    Args:
-        msg (str, optional): Message to record in the Datalog. Defaults to "This event is not functional yet."
-        popup (bool, optional): If True, display a top-level messagebox with the message contents. Defaults to True.
+    - Args:
+        - msg (str, optional): Message to record in the Datalog. Defaults to "This event is not functional yet."
+        - popup (bool, optional): If True, display a top-level messagebox with the message contents. Defaults to True.
     """
     # Get the number of messages that have already been logged during this session:
     messages = len(StVars.datalog_msgs)
@@ -1552,8 +1300,8 @@ def pop_filter(clear: bool = False):
     Alternatively, it can also clear the filtered record list, enforcing the use of the standard master list in
     populating the viewport table instead.
 
-    Args:
-        clear (bool, optional): Set to True to bypass the use of filters and sorting. Defaults to False.
+    - Args:
+        - clear (bool, optional): Set to True to bypass the use of filters and sorting. Defaults to False.
     """
     # Regardless of the value of 'clear', the record list needs to be emptied in order to refresh accurately:
     while len(StVars.records_filter) > 0:
@@ -1634,7 +1382,7 @@ def pop_filter(clear: bool = False):
             StVars.records_filter.append({"Status": "All Records Hidden"})
             # Also create an empty placeholder entry box to fill out the total bar:
             total_ref_0 = tk.Entry(total_bar, state="disabled")
-            # Add it to the total reference list so it can be properly destroyed when the table updates:
+            # Add it to the total reference list, so it can be properly destroyed when the table updates:
             StVars.total_refs.append(total_ref_0)
             # Draw the entry box to the screen:
             total_ref_0.pack(side="left", fill="x", expand=True)
@@ -1679,7 +1427,7 @@ def pop_filter(clear: bool = False):
                 # Place it in the total bar, packing left to right and expanding to fill the row:
                 # * This ensures that the entry boxes are the same size as their respective table rows.
                 col_total_box.pack(side="left", fill="x", expand=True)
-                # Add the reference for the entry box to a persistent list so it can be properly destroyed when updated:
+                # Add the ref for the entry box to a persistent list, so it can be properly destroyed when updated:
                 StVars.total_refs.append(col_total_box)
                 box += 1
 
@@ -1689,8 +1437,8 @@ def pop_listbox(tab: str):
     """
     Populates the list-boxes in the Validation Control window when the "Auto-Populate" button is pressed.
 
-    Args:
-        tab (str): The name of the tab to populate ("Employee", "Location", or "Department").
+    - Args:
+        - tab (str): The name of the tab to populate ("Employee", "Location", or "Department").
     """
     # Direct the program to the correct StVars list based on the value of 'tab':
     if tab == "Employee":
@@ -1724,8 +1472,8 @@ def pop_master(send_log: bool = False):
     This clears the current master record list and repopulates it with data from the saved, deleted, invalid, and temp
     record lists. It is called any time the component record lists are modified, refreshing of the viewport table.
 
-    Args:
-        send_log (bool, optional): When True, a Datalog entry is sent to 'log_msg' containing an updated total record
+    - Args:
+        - send_log (bool, optional): When True, a Datalog entry is sent to 'log_msg' containing an updated total record
             count. Note that this does NOT result in a popup, only a log entry. Defaults to False.
     """
     iter8 = 0
@@ -1900,7 +1648,7 @@ def pop_master(send_log: bool = False):
             # Place it in the total bar, packing left to right and expanding to fill the row:
             # * This ensures that the entry boxes are the same size as their respective table rows.
             col_total_box.pack(side="left", fill="x", expand=True)
-            # Add the reference for the entry box to a persistent list so it can be properly destroyed when updated:
+            # Add the reference for the entry box to a persistent list, so it can be properly destroyed when updated:
             StVars.total_refs.append(col_total_box)
             box += 1
     # If there are no records loaded to any of the record lists, disable all menu options, buttons, and keybindings
@@ -1939,8 +1687,8 @@ def pop_temp(path: str):
     """
     Converts a tabular source document into a list of dictionaries for the program to work from.
 
-    Args:
-        path (str): The file path to the source document.
+    - Args:
+        - path (str): The file path to the source document.
     """
     # Open the selected file as a DataFrame first. Read data from '.csv' files using 'pd.read_csv()':
     if path.split(".")[-1] == "csv":
@@ -2122,10 +1870,10 @@ def refresh_table(repop_tree: bool = True, master_log: bool = False):
     Clears the contents of the viewport table, refreshes the contents of the master and filtered record lists, and then
     repopulates the viewport table with updated data.
 
-    Args:
-        repop_tree (bool, optional): Whether to repopulate the viewport table after clearing it. Set this to False for
+    - Args:
+        - repop_tree (bool, optional): Whether to repopulate the viewport table after clearing it. Set this to False for
             simply clearing the table. Defaults to True.
-        master_log (bool, optional): Whether to send a Datalog message when repopulating the master record list. Set
+        - master_log (bool, optional): Whether to send a Datalog message when repopulating the master record list. Set
             this to True when performing record modifications. Defaults to False.
     """
     # Clear the contents of the viewport table:
@@ -2257,7 +2005,9 @@ def reject_selection():
             else:
                 log_msg("1 record was removed from memory.", popup=False)
             row = 0
-            while row < len(data_address[2]) and data_address[2][row] < len(base_tree.get_children()):
+            while row < len(data_address[2]) and data_address[2][row] < len(
+                base_tree.get_children()
+            ):
                 # Since performing this operation deselects the rows, reselect them:
                 base_tree.selection_add(base_tree.get_children()[data_address[2][row]])
                 row += 1
@@ -2360,8 +2110,8 @@ def select_toggle(state: bool):
     Enables and disables menu options, shortcut buttons, and keybindings based on the record status of the currently
     selected table row (or lack thereof).
 
-    Args:
-        state (bool): True when a row is selected, False when no row is selected.
+    - Args:
+        - state (bool): True when a row is selected, False when no row is selected.
     """
     if state:
         # Request information about which record is currently selected:
@@ -2453,13 +2203,72 @@ def select_toggle(state: bool):
 
 
 # Updated: All good for now.
+def toggle_chart(state: bool = False, chart: str = "line"):
+    """
+    Shows or hides the Chart Generation window and sets the default value of the "Chart Type" combo-box.
+
+    - Args:
+        - state (bool, optional): Shows the window when True, hides it when False. Defaults to False.
+        - chart (str, optional): How to populate the "Chart Type" combo-box. Defaults to "line".
+    """
+    if state:
+        # Set a persistent variable to True to keep 'chart_update()' running while the window is visible:
+        StVars.chart_on = True
+        # Make the window visible:
+        chart_window.deiconify()
+        # Populate the "Chart Type" combo-box with the provided value:
+        if chart == "line":
+            chart_type_combo.set("Line Chart")
+        elif chart == "bar":
+            chart_type_combo.set("Bar Chart")
+        elif chart == "pie":
+            chart_type_combo.set("Pie Chart")
+        # If no value is provided, make the "Chart Type" combo-box empty:
+        else:
+            chart_type_combo.set("")
+        # Populate the choices in the x-axis combo-box with all column in the chart except "Status":
+        if len(base_tree["columns"]):
+            chart_x_combo.configure(values=list(base_tree["columns"][:-1]))
+        # If there is an active sort, set the sorted column as the default value for the x-axis:
+        if StVars.sort_column != "":
+            chart_x_combo.set(StVars.sort_column)
+        else:
+            # Otherwise, use "Timestamp", if possible (don't auto-populate the x-axis combo if no sort or "Timestamp"):
+            if "Timestamp" in list(base_tree["columns"]):
+                chart_x_combo.set("Timestamp")
+        # If there are no columns to choose from, disable the other axis combo-boxes:
+        if chart_x_combo.get() == "":
+            chart_y_combo.configure(state="disabled")
+            chart_m_combo.configure(state="disabled")
+        # As long as there are columns to choose from, populate the other axis combo-boxes with compatible values:
+        else:
+            chart_y_combo.configure(state="normal")
+            chart_m_combo.configure(state="normal")
+            update_axes()
+        # Start the update loop for the Chart Generation window:
+        chart_update()
+    else:
+        # Turn off the update loop for the Chart Generation window:
+        StVars.chart_on = False
+        # Destroy any active charts and their respective toolbars:
+        if len(chart_top_frame.winfo_children()) > 0:
+            chart_top_frame.winfo_children()[0].destroy()
+        if len(chart_tool_frame.winfo_children()) > 0:
+            chart_tool_frame.winfo_children()[0].destroy()
+        # Hide the window:
+        chart_window.withdraw()
+        # Refocus the keyboard on the root window:
+        root.focus_force()
+
+
+# Updated: All good for now.
 def toggle_datalog(state: bool = False):
     """
     Handles the visibility of the Datalog window. Technically speaking, it does not actually close when SalesTrax is
     running; it only hides.
 
-    Args:
-        state (bool, optional): When True, the Datalog becomes visible, and when False, it is hidden. Defaults to False.
+    - Args:
+        - state (bool, optional): When True the Datalog becomes visible and when False, it is hidden. Defaults to False.
     """
     if state:
         # Reveal the Datalog window:
@@ -2503,9 +2312,9 @@ def toggle_notebook(state: bool = False, tab: str = "employees"):
     Handles the visibility of the Validation Control window. Technically speaking, it does not actually close when
     SalesTrax is running; it only hides.
 
-    Args:
-        state (bool, optional): When True, the window becomes visible, and when False, it is hidden. Defaults to False.
-        tab (str, optional): The name of the tab to open ("employees", "locations", or "departments"). Defaults to
+    - Args:
+        - state (bool, optional): When True the window becomes visible, and when False it is hidden. Defaults to False.
+        - tab (str, optional): The name of the tab to open ("employees", "locations", or "departments"). Defaults to
             "employees".
     """
     if state:
@@ -2547,11 +2356,11 @@ def tree_click(event):
     This determines which area of the Treeview object was clicked to determine which action it takes. If a separator was
     clicked, do nothing. If a column header was clicked, sort the contents of the tree based the column header.
 
-    Args:
-        event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Button-1>' (mouse left-click), but
-        it should not be manually declared.
-    Returns:
-        (str): This returns "break" back to the calling event, preventing it from performing its default behavior.
+    - Args:
+        - event (tkinter.Event): A standard tkinter keybinding event. In this case, '<Button-1>' (mouse left-click), but
+            it should not be manually declared.
+    - Returns:
+        - (str): This returns "break" back to the calling event, preventing it from performing its default behavior.
     """
     # Prevent column resizing by intercepting clicks on column separators:
     if base_tree.identify_region(event.x, event.y) == "separator":
@@ -2577,13 +2386,68 @@ def tree_click(event):
 
 
 # Updated: All good for now.
+def update_axes():
+    """
+    Populates the values of the y-axis and multi-chart combo-boxes in the Chart Generation window based on the chosen
+    value for the x-axis combo-box.
+    """
+    # Initialize base lists for the y-axis and multi-chart combo-boxes:
+    y_list = [""]
+    m_list = ["None"]
+    # Initialize an empty list to reference for values:
+    list_used = list()
+    # Determine which list to used, based on whether records are filtered, sorted, or even loaded at all:
+    if len(StVars.records_filter) > 0:
+        list_used = StVars.records_filter
+    elif len(StVars.records_master) > 0:
+        list_used = StVars.records_master
+    else:
+        list_used = None
+    # As long as there are at least some records to use, continue:
+    if list_used is not None:
+        # Iterate through each column to find the first valid entry in that column, if one exists:
+        for column in list(base_tree["columns"]):
+            index = 0
+            while index < len(list_used):
+                # If the record contains an empty field in the current column, try the next record:
+                if list_used[index][column] == "":
+                    index += 1
+                    # If no valid fields are found in the current column, give up:
+                    if index == len(list_used):
+                        index = 0
+                        break
+                # If a valid field is found, use its index to get the field's datatype:
+                else:
+                    break
+            # If the column contains numeric values and isn't the same as the x-axis, it can be used for the y-axis:
+            if (
+                type(list_used[index][column]) == float
+                or type(list_used[index][column]) == int
+            ) and column != chart_x_combo.get():
+                y_list.append(column)
+            # If the column doesn't contain numeric values, but also doesn't match the x-axis, it can be used in the
+            # multi-chart combo-box:
+            elif column != chart_x_combo.get():
+                m_list.append(column)
+        # As long as at least one valid column is found, remove the empty string at the beginning of 'y_list':
+        if len(y_list) > 1:
+            y_list.remove(y_list[0])
+        # Assign the valid y-axis values to the y-axis combo-box, and then select the first one:
+        chart_y_combo.configure(values=y_list)
+        chart_y_combo.set(y_list[0])
+        # Assign the valid multi-chart values to the multi-chart combo-box, and then select "None" by default:
+        chart_m_combo.configure(values=m_list)
+        chart_m_combo.set(m_list[0])
+
+
+# Updated: All good for now.
 def update_record(record: dict, values: list):
     """
     Performs direct record modifications based on criteria defined in 'edit_record()'.
 
-    Args:
-        record (dict): The record list address of the record to be modified. Note: This is an object reference.
-        values (list): The new values to use in the record modification. Note: This is a list of object references.
+    - Args:
+        - record (dict): The record list address of the record to be modified. Note: This is an object reference.
+        - values (list): The new values to use in the record modification. Note: This is a list of object references.
     """
     # Change the record one key-value pair at a time:
     iter8 = 0
@@ -3063,8 +2927,8 @@ def write_file(path: str):
     """
     Writes all records with "Saved" status to a CSV, ODS, or XLSX file.
 
-    Args:
-        path (str): The filename and location of the new/updated file.
+    - Args:
+        - path (str): The filename and location of the new/updated file.
     """
     # Create a 'pandas' DataFrame object from the records in 'StVars.records_saved':
     data_frame = pd.DataFrame(StVars.records_saved)
@@ -3212,8 +3076,12 @@ list_menu.add_command(
 menu_bar.add_cascade(label="Lists", menu=list_menu)
 # Define the "Generate" menu and its commands:
 data_menu = tk.Menu(menu_bar, tearoff=0)
-data_menu.add_command(label="Line Chart", state="disabled", command=line_definition)
-data_menu.add_command(label="Bar Chart", state="disabled", command=bar_definition)
+data_menu.add_command(
+    label="Line Chart", state="disabled", command=lambda: toggle_chart(True, "line")
+)
+data_menu.add_command(
+    label="Bar Chart", state="disabled", command=lambda: toggle_chart(True, "bar")
+)
 data_menu.add_command(label="Pie Chart", state="disabled", command=log_msg)
 # Finalize the contents of the "Generate" menu:
 menu_bar.add_cascade(label="Generate", menu=data_menu)
@@ -3327,10 +3195,16 @@ btn_department = tk.Button(
     command=lambda: toggle_notebook(state=True, tab="departments"),
 )
 btn_line = tk.Button(
-    shortcut_bar, image=img_line, state="disabled", command=line_definition
+    shortcut_bar,
+    image=img_line,
+    state="disabled",
+    command=lambda: toggle_chart(True, "line"),
 )
 btn_bar = tk.Button(
-    shortcut_bar, image=img_bar, state="disabled", command=bar_definition
+    shortcut_bar,
+    image=img_bar,
+    state="disabled",
+    command=lambda: toggle_chart(True, "bar"),
 )
 btn_pie = tk.Button(shortcut_bar, image=img_pie, state="disabled", command=log_msg)
 btn_help = tk.Button(
@@ -3340,7 +3214,7 @@ btn_help = tk.Button(
 btn_logo = tk.Button(
     shortcut_bar,
     image=img_logo,
-    text="SalesTrax v0.1.5 ",
+    text="SalesTrax v0.1.6 ",
     font='"consolas" 12 italic bold',
     fg="gray",
     activebackground="black",
@@ -3726,6 +3600,110 @@ departments_selection.pack(side="right", padx=(0, 15), pady=(0, 15))
 departments_add.pack(side="left", ipadx=25, padx=(15, 32), pady=(0, 15))
 departments_auto.pack(side="left", ipadx=25, pady=(0, 15))
 departments_delete.pack(side="right", ipadx=25, padx=(0, 15), pady=(0, 15))
+
+# Section: Chart window
+# Define the basic chart window:
+chart_window = tk.Toplevel(root)
+# Set the title bar contents:
+chart_window.title("Chart Generation")
+chart_window.iconbitmap("Images/salestrax_icon_bw.ico")
+# Set the window size based on the user's monitor size and center it:
+chart_window.geometry(
+    (
+        # 70% monitor width:
+        str(int(StVars.monitor_width * 0.7))
+        + "x"
+        # 80% monitor height:
+        + str(int(StVars.monitor_height * 0.8))
+        + "+"
+        # Center horizontally:
+        + str(int((StVars.monitor_width / 2) - ((StVars.monitor_width * 0.35) + 25)))
+        + "+"
+        # Center vertically:
+        + str(int((StVars.monitor_height / 2) - ((StVars.monitor_height * 0.4) + 25)))
+    )
+)
+# Set the "X" button to withdraw the window instead of closing it:
+chart_window.protocol("WM_DELETE_WINDOW", toggle_chart)
+# Define the base layout frames for organizational setup:
+# Ensure the frame that holds the bar chart is visible even when empty (otherwise, the window looks incomplete):
+chart_top_frame = tk.Frame(chart_window, bg="white", border=2, relief="groove")
+chart_bottom_frame = tk.Frame(chart_window)
+# Define the frames for the 'matplotlib' toolbar:
+chart_tool_frame = tk.Frame(chart_bottom_frame)
+# Define the primary frame for the chart definition area:
+chart_def_frame = tk.Frame(chart_bottom_frame)
+# Define the frame for the labels and entry boxes:
+chart_left_frame = tk.Frame(chart_def_frame)
+# Define the frame for the control buttons:
+chart_right_frame = tk.Frame(chart_def_frame)
+# Chart type label:
+chart_type_label = tk.Label(chart_left_frame, text="Chart Type", anchor="e")
+# Combo box for defining the type of chart to generate:
+chart_type_combo = ttk.Combobox(chart_left_frame, values=["Line Chart", "Bar Chart"])
+# X-axis label:
+chart_x_label = tk.Label(chart_left_frame, text="X-Axis", anchor="e")
+# Combo box for defining the x-axis to use in the bar chart:
+chart_x_combo = ttk.Combobox(chart_left_frame, values=[""])
+# Multi-chart label:
+chart_m_label = tk.Label(chart_left_frame, text="Multi-Chart", anchor="e")
+# Combo box for defining the y-axis to use in the bar chart:
+chart_m_combo = ttk.Combobox(chart_left_frame, values=[""])
+# Y-axis label:
+chart_y_label = tk.Label(chart_left_frame, text="Y-Axis", anchor="e")
+# Combo box for defining the y-axis to use in the bar chart:
+chart_y_combo = ttk.Combobox(chart_left_frame, values=[""])
+# Define the "OK" button:
+chart_ok_button = tk.Button(
+    chart_right_frame,
+    text="OK",
+    width=10,
+    command=lambda: [
+        chart_top_frame.winfo_children()[0].destroy()
+        if len(chart_top_frame.winfo_children()) > 0
+        else do_nothing(),
+        chart_tool_frame.winfo_children()[0].destroy()
+        if len(chart_tool_frame.winfo_children()) > 0
+        else do_nothing(),
+        chart_generation(
+            chart_type_combo.get(), chart_x_combo.get(), chart_y_combo.get()
+        ),
+    ]
+    if chart_x_combo.get() != "" and chart_y_combo.get() != ""
+    else [
+        log_msg("Both axes need to be defined to generate data."),
+        chart_top_frame.winfo_children()[0].destroy()
+        if len(chart_top_frame.winfo_children()) > 0
+        else do_nothing(),
+        chart_tool_frame.winfo_children()[0].destroy()
+        if len(chart_tool_frame.winfo_children()) > 0
+        else do_nothing(),
+        chart_window.focus_force(),
+    ],
+)
+# Define the "Cancel" button:
+chart_cancel_button = tk.Button(
+    chart_right_frame, text="Cancel", width=10, command=lambda: toggle_chart()
+)
+# Place all the objects in their respective frames:
+chart_top_frame.pack(side="top", fill="both", expand=True, padx=5, pady=(5, 0))
+chart_bottom_frame.pack(side="bottom", fill="x")
+chart_tool_frame.pack(side="left", padx=(10, 0), pady=(0, 80), anchor="nw")
+chart_def_frame.pack(side="right", anchor="se")
+chart_left_frame.pack(side="left", padx=(0, 10), pady=(30, 40))
+chart_right_frame.pack(side="right", padx=(10, 40), pady=(30, 40))
+chart_type_label.grid(row=0, column=0)
+chart_type_combo.grid(row=0, column=1)
+chart_x_label.grid(row=0, column=2)
+chart_x_combo.grid(row=0, column=3)
+chart_m_label.grid(row=1, column=0)
+chart_m_combo.grid(row=1, column=1)
+chart_y_label.grid(row=1, column=2)
+chart_y_combo.grid(row=1, column=3)
+chart_ok_button.pack(side="top")
+chart_cancel_button.pack(side="bottom")
+# Hide the window by default:
+chart_window.withdraw()
 
 # Section: Misc objects
 # Define images for popup windows:

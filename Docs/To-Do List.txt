@@ -42,9 +42,9 @@ And lines beginning with "&" are fully unimplemented.
 &	If "Modify", open the "Choose Filter" dialog with any active filters and sorts already in place.
 
 #Task: Combine all chart types into one persistent window.
-& There should be a "Choose Chart Type" entry field.
-& All other fields should auto-generate based on the chosen chart type.
-& "Y-Axis" should be disabled until "X-Axis" is chosen, then auto-populate based on compatible values.
+^ There should be a "Choose Chart Type" combo-box.
+^ All other fields should auto-generate based on the chosen chart type.
+^ "Y-Axis" should be disabled until "X-Axis" is chosen, then auto-populate based on compatible values.
 & There should be checkboxes for including temporary, deleted, and invalid records.
 &	Individual invalid records will still be excluded if their x or y value is invalid.
 
