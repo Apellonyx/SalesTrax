@@ -1,9 +1,9 @@
 """
 Program Name: SalesTrax
-Version: 0.1.6
+Version: 0.1.7
 Status: Prototype
 Created on: 2023-04-09
-Last updated: 2023-04-30
+Last updated: 2023-05-03
 Created with: Python 3.11.2
 Author: Danny Fleenor
 Contributors:
@@ -137,13 +137,37 @@ def chart_generation(chart: str, x: str, y: str):
         )
     # Add the axis values to the appropriate data lists:
     for record in list_used:
-        if record in StVars.records_saved:
-            # Round "Timestamps" to the nearest day to make cleaner charts:
-            if x == "Timestamp":
-                x_data.append(pd.Timestamp(record[x]).round(freq="d"))
-            # Round float values down to a whole number to make cleaner charts:
-            elif x == "Cost" or x == "Total":
-                x_data.append(int(record[x]))
+        if (
+            # Only include saved records if the "Include Saved" checkbox is checked:
+            (record in StVars.records_saved and chart_saved.get())
+            # Only include temp records if the "Include Temporary" checkbox is checked:
+            or (record in StVars.records_temp and chart_temp.get())
+            # Only include deleted records if the "Include Deleted" checkbox is checked:
+            or (record in StVars.records_deleted and chart_deleted.get())
+            # Only include invalid records if the "Include Invalid" checkbox is checked:
+            or (record in StVars.records_invalid and chart_invalid.get())
+            # Still exclude records if their x-axis or y-axis cells are empty:
+            and record[x] != ""
+            and record[y] != ""
+        ):
+            # Round "Timestamps" to make cleaner charts:
+            if x == "Timestamp" and chart_r_combo.get() != "None":
+                if chart_r_combo.get() == "Day":
+                    x_data.append(pd.Timestamp(record[x]).floor(freq="d"))
+                elif chart_r_combo.get() == "Week":
+                    x_data.append(pd.Timestamp(record[x]).floor(freq="7d"))
+                elif chart_r_combo.get() == "Month":
+                    x_data.append(pd.Timestamp(record[x]).floor(freq="31d"))
+                elif chart_r_combo.get() == "Quarter":
+                    x_data.append(pd.Timestamp(record[x]).floor(freq="92d"))
+                elif chart_r_combo.get() == "Year":
+                    x_data.append(pd.Timestamp(record[x]).floor(freq="365d"))
+            # Round float values to make cleaner charts:
+            elif (x == "Cost" or x == "Total") and chart_r_combo.get() != "None":
+                x_data.append(
+                    int(record[x] / float(chart_r_combo.get()[1:]))
+                    * float(chart_r_combo.get()[1:])
+                )
             else:
                 x_data.append(record[x])
             y_data.append(record[y])
@@ -161,7 +185,7 @@ def chart_generation(chart: str, x: str, y: str):
                     # If a duplicate x-value is found, add its y-value to the first instance's y-value and remove the
                     # second instance from both x and y lists:
                     if x_data[iter8] == x_data[duplic8]:
-                        # If the y-axis is set to "Cost", average its values instead of summing them:
+                        # If the y-axis is set to "Cost", average its values after summing them:
                         if y == "Cost":
                             avg_div += 1
                         y_data[iter8] += y_data[duplic8]
@@ -172,13 +196,9 @@ def chart_generation(chart: str, x: str, y: str):
                 y_data[iter8] /= avg_div
                 iter8 += 1
         iter8 = 0
-        # Bar charts need a width value in iterable form, so make them all the same:
+        # Bar charts need a width value in iterable form, so make one for each x-y pair:
         while iter8 < len(x_data) and chart == "Bar Chart":
-            # Charts with a lot of bars should have thinner columns:
-            if len(x_data) > 31:
-                w_data.append(0.5)
-            else:
-                w_data.append(0.8)
+            w_data.append(0.8)
             iter8 += 1
         # Define a blank canvas on which to draw the line chart, ~65% of the monitor's height and width:
         chart_frame = Figure(
@@ -215,14 +235,18 @@ def chart_generation(chart: str, x: str, y: str):
         canvas.get_tk_widget().pack(fill="both", expand=True)
         # Place the toolbar inside the "Line Chart" window in its designated frame:
         toolbar.pack()
+    else:
+        # This shouldn't ever show, but it will be saved to the Datalog as an error if it does:
+        log_msg("No valid data has been defined for the chart.")
+        chart_window.focus_force()
 
 
 # Updated: All good for now.
 def chart_update():
     """
-    Keeps the y-axis and multi-chart combo-boxes compatible with the x-axis chosen in the Chart Generation window.
+    Keeps the y-axis and rounding combo-boxes compatible with the x-axis chosen in the Chart Generation window.
     """
-    # Only update the y-axis and multi-chart combo-boxes when the x-axis combo-box value changes:
+    # Only update the y-axis and rounding combo-boxes when the x-axis combo-box value changes:
     if StVars.x_axis_value != chart_x_combo.get():
         # Update the value of the x-axis choice:
         StVars.x_axis_value = chart_x_combo.get()
@@ -1379,6 +1403,20 @@ def pop_filter(clear: bool = False):
                 )
         # In the case where all records have been filtered out of the table, create a single record informing the user:
         if len(StVars.records_filter) == 0:
+            # Disable chart menu options:
+            if data_menu.entrycget("Line Chart", option="state") == "normal":
+                data_menu.entryconfigure("Line Chart", state="disabled")
+            if data_menu.entrycget("Bar Chart", option="state") == "normal":
+                data_menu.entryconfigure("Bar Chart", state="disabled")
+            if data_menu.entrycget("Pie Chart", option="state") == "normal":
+                data_menu.entryconfigure("Pie Chart", state="disabled")
+            # Disable chart buttons:
+            btn_line.configure(state="disabled")
+            btn_bar.configure(state="disabled")
+            btn_pie.configure(state="disabled")
+            # Close the Chart Generation window if it is open:
+            if StVars.chart_on:
+                toggle_chart()
             StVars.records_filter.append({"Status": "All Records Hidden"})
             # Also create an empty placeholder entry box to fill out the total bar:
             total_ref_0 = tk.Entry(total_bar, state="disabled")
@@ -1387,6 +1425,17 @@ def pop_filter(clear: bool = False):
             # Draw the entry box to the screen:
             total_ref_0.pack(side="left", fill="x", expand=True)
         else:
+            # Enable chart menu options:
+            if data_menu.entrycget("Line Chart", option="state") == "disabled":
+                data_menu.entryconfigure("Line Chart", state="normal")
+            if data_menu.entrycget("Bar Chart", option="state") == "disabled":
+                data_menu.entryconfigure("Bar Chart", state="normal")
+            if data_menu.entrycget("Pie Chart", option="state") == "disabled":
+                data_menu.entryconfigure("Pie Chart", state="normal")
+            # Enable charts:
+            btn_line.configure(state="normal")
+            btn_bar.configure(state="normal")
+            btn_pie.configure(state="normal")
             box = 0
             keys = list(StVars.records_filter[0].keys())
             # Create one total bar entry box for each column in the table:
@@ -1592,6 +1641,9 @@ def pop_master(send_log: bool = False):
             btn_hide_invalid.config(state="disabled")
         # Enable any other menu options and buttons that perform batch actions on all varieties of loaded data:
         file_menu.entryconfig("Clear All Data", state="normal")
+        edit_menu.entryconfig("Select All", state="normal")
+        edit_menu.entryconfig("Select None", state="normal")
+        edit_menu.entryconfig("Invert Selection", state="normal")
         edit_menu.entryconfig("Refresh Table", state="normal")
         view_menu.entryconfig("Toggle Filter...", state="normal")
         data_menu.entryconfig("Line Chart", state="normal")
@@ -1602,6 +1654,31 @@ def pop_master(send_log: bool = False):
         btn_line.config(state="normal")
         btn_bar.config(state="normal")
         btn_pie.config(state="normal")
+        # Enable keybindings for status-agnostic batch actions:
+        root.bind(
+            "<Control-a>",
+            func=lambda event: (
+                base_tree.selection_add(base_tree.get_children())
+                if len(base_tree.get_children()) > 0
+                else do_nothing()
+            ),
+        )
+        root.bind(
+            "<Control-d>",
+            func=lambda event: (
+                base_tree.selection_remove(base_tree.get_children())
+                if len(base_tree.get_children()) > 0
+                else do_nothing()
+            ),
+        )
+        root.bind(
+            "<Control-e>",
+            func=lambda event: (
+                base_tree.selection_toggle(base_tree.get_children())
+                if len(base_tree.get_children()) > 0
+                else do_nothing()
+            ),
+        )
         # Finally, sort the contents of 'StVars.records_master' by its first column:
         if len(StVars.records_master) > 0:
             heading = list(StVars.records_master[0].keys())[0]
@@ -1656,6 +1733,9 @@ def pop_master(send_log: bool = False):
     else:
         file_menu.entryconfig("Export To...", state="disabled")
         file_menu.entryconfig("Clear All Data", state="disabled")
+        edit_menu.entryconfig("Select All", state="disabled")
+        edit_menu.entryconfig("Select None", state="disabled")
+        edit_menu.entryconfig("Invert Selection", state="disabled")
         edit_menu.entryconfig("Refresh Table", state="disabled")
         edit_menu.entryconfig("Commit All", state="disabled")
         edit_menu.entryconfig("Reject All", state="disabled")
@@ -1680,6 +1760,9 @@ def pop_master(send_log: bool = False):
         btn_pie.config(state="disabled")
         root.unbind(sequence="<Shift-Return>")
         root.unbind(sequence="<Shift-Delete>")
+        root.unbind("<Control-a>")
+        root.unbind("<Control-d>")
+        root.unbind("<Control-e>")
 
 
 # Updated: All good for now.
@@ -1697,8 +1780,6 @@ def pop_temp(path: str):
     # Read data from all other supported file types using 'pd.read_excel()':
     else:
         data_loaded = pd.DataFrame(pd.read_excel(path)).fillna("")
-    # Add a status key to define the record in the 'StVars.records_temp' department:
-    data_loaded["Status"] = "Temporary"
     # Convert the DataFrame to a list of dictionaries for more flexible manipulation:
     data_loaded = data_loaded.to_dict(orient="records")
     # Pass the entire list of records into 'StVars.records_temp' for persistent storage:
@@ -2225,25 +2306,39 @@ def toggle_chart(state: bool = False, chart: str = "line"):
             chart_type_combo.set("Pie Chart")
         # If no value is provided, make the "Chart Type" combo-box empty:
         else:
-            chart_type_combo.set("")
+            chart_type_combo.set("None")
         # Populate the choices in the x-axis combo-box with all column in the chart except "Status":
         if len(base_tree["columns"]):
             chart_x_combo.configure(values=list(base_tree["columns"][:-1]))
         # If there is an active sort, set the sorted column as the default value for the x-axis:
         if StVars.sort_column != "":
             chart_x_combo.set(StVars.sort_column)
+        # With no active sort, use the first column in the table:
+        elif len(list(base_tree["columns"][:-1])) > 0:
+            chart_x_combo.set(list(base_tree["columns"][:-1])[0])
+        # If all records are hidden, empty all combo-boxes:
+        # * This should never happen, since the window can't be open when all records are hidden. BSTS.
         else:
-            # Otherwise, use "Timestamp", if possible (don't auto-populate the x-axis combo if no sort or "Timestamp"):
-            if "Timestamp" in list(base_tree["columns"]):
-                chart_x_combo.set("Timestamp")
-        # If there are no columns to choose from, disable the other axis combo-boxes:
-        if chart_x_combo.get() == "":
-            chart_y_combo.configure(state="disabled")
-            chart_m_combo.configure(state="disabled")
+            chart_type_combo.set("None")
+            chart_x_combo.set("None")
+            chart_r_combo.set("None")
+            chart_y_combo.set("None")
         # As long as there are columns to choose from, populate the other axis combo-boxes with compatible values:
-        else:
-            chart_y_combo.configure(state="normal")
-            chart_m_combo.configure(state="normal")
+        if chart_x_combo.get() != "None":
+            if len(StVars.records_saved) > 0:
+                # When there are saved records, the "Include Saved" checkbox should be True by default:
+                if not chart_saved.get():
+                    chart_saved_check.invoke()
+                # Turn off the "Include Temporary" checkbox default if it was previously True:
+                if chart_temp.get():
+                    chart_temp_check.invoke()
+            elif len(StVars.records_temp) > 0:
+                # If no saved records are loaded, the "Include Temporary" checkbox should be True by default:
+                if not chart_temp.get():
+                    chart_temp_check.invoke()
+                # Turn off the "Include Saved" checkbox default if it was previously True:
+                if chart_saved.get():
+                    chart_saved_check.invoke()
             update_axes()
         # Start the update loop for the Chart Generation window:
         chart_update()
@@ -2388,12 +2483,22 @@ def tree_click(event):
 # Updated: All good for now.
 def update_axes():
     """
-    Populates the values of the y-axis and multi-chart combo-boxes in the Chart Generation window based on the chosen
+    Populates the values of the y-axis and rounding combo-boxes in the Chart Generation window based on the chosen
     value for the x-axis combo-box.
     """
-    # Initialize base lists for the y-axis and multi-chart combo-boxes:
-    y_list = [""]
-    m_list = ["None"]
+    # Initialize base lists for the y-axis and rounding combo-boxes:
+    y_list = ["None"]
+    r_list = ["None"]
+    # Populate the "Rounding" values based on the X-Axis chosen:
+    if chart_x_combo.get() == "Timestamp":
+        chart_r_combo.configure(state="normal")
+        r_list.extend(["Day", "Week", "Month", "Quarter", "Year"])
+    elif chart_x_combo.get() == "Cost" or chart_x_combo.get() == "Total":
+        chart_r_combo.configure(state="normal")
+        r_list.extend(["$1.00", "$5.00", "$10.00", "$25.00", "$50.00", "$100.00"])
+    # Disable the "Rounding" combo-box if a non-timestamp, non-float x-axis is chosen:
+    else:
+        chart_r_combo.configure(state="disabled")
     # Initialize an empty list to reference for values:
     list_used = list()
     # Determine which list to used, based on whether records are filtered, sorted, or even loaded at all:
@@ -2425,19 +2530,15 @@ def update_axes():
                 or type(list_used[index][column]) == int
             ) and column != chart_x_combo.get():
                 y_list.append(column)
-            # If the column doesn't contain numeric values, but also doesn't match the x-axis, it can be used in the
-            # multi-chart combo-box:
-            elif column != chart_x_combo.get():
-                m_list.append(column)
         # As long as at least one valid column is found, remove the empty string at the beginning of 'y_list':
         if len(y_list) > 1:
             y_list.remove(y_list[0])
         # Assign the valid y-axis values to the y-axis combo-box, and then select the first one:
         chart_y_combo.configure(values=y_list)
         chart_y_combo.set(y_list[0])
-        # Assign the valid multi-chart values to the multi-chart combo-box, and then select "None" by default:
-        chart_m_combo.configure(values=m_list)
-        chart_m_combo.set(m_list[0])
+        # Assign the valid values to the rounding combo-box, and then select "None" by default:
+        chart_r_combo.configure(values=r_list)
+        chart_r_combo.set(r_list[0])
 
 
 # Updated: All good for now.
@@ -2559,6 +2660,23 @@ def validate_all():
                         StVars.records_saved[iter8]["Status"] = "Invalid"
                         StVars.records_invalid.append(StVars.records_saved[iter8])
                         StVars.records_saved.remove(StVars.records_saved[iter8])
+                        invalid8 = 1
+            if invalid8 == 0:
+                # Only check math validation if all three required fields are present:
+                if (
+                    "Count" in StVars.records_saved[iter8].keys()
+                    and "Cost" in StVars.records_saved[iter8].keys()
+                    and "Total" in StVars.records_saved[iter8].keys()
+                ):
+                    # Invalidate saved records where the math doesn't work out correctly:
+                    if StVars.records_saved[iter8]["Total"] != round(
+                        StVars.records_saved[iter8]["Count"]
+                        * StVars.records_saved[iter8]["Cost"],
+                        2,
+                    ):
+                        StVars.records_saved[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_saved[iter8])
+                        StVars.records_saved.remove(StVars.records_saved[iter8])
             iter8 -= 1
     if len(StVars.records_temp) > 0:
         iter8 = len(StVars.records_temp) - 1
@@ -2615,6 +2733,23 @@ def validate_all():
                         StVars.records_temp[iter8]["Status"] = "Invalid"
                         StVars.records_invalid.append(StVars.records_temp[iter8])
                         StVars.records_temp.remove(StVars.records_temp[iter8])
+                        invalid8 = 1
+            if invalid8 == 0:
+                # Only check math validation if all three required fields are present:
+                if (
+                    "Count" in StVars.records_temp[iter8].keys()
+                    and "Cost" in StVars.records_temp[iter8].keys()
+                    and "Total" in StVars.records_temp[iter8].keys()
+                ):
+                    # Invalidate records where the math doesn't work out correctly:
+                    if StVars.records_temp[iter8]["Total"] != round(
+                        StVars.records_temp[iter8]["Count"]
+                        * StVars.records_temp[iter8]["Cost"],
+                        2,
+                    ):
+                        StVars.records_temp[iter8]["Status"] = "Invalid"
+                        StVars.records_invalid.append(StVars.records_temp[iter8])
+                        StVars.records_temp.remove(StVars.records_temp[iter8])
             iter8 -= 1
     # Check the invalid records list last to ensure that everything there is supposed to be there:
     if len(StVars.records_invalid) > 0:
@@ -2625,6 +2760,7 @@ def validate_all():
             employee = 0
             location = 0
             department = 0
+            math = 0
             # Initialize a comparison variable:
             total = 0
             # Only set the "Employee" field's variable if it is being used for validation control:
@@ -2645,6 +2781,19 @@ def validate_all():
                 and "Department" in StVars.records_invalid[iter8].keys()
             ):
                 department = 1
+            # Only set the 'math' variable if the "Cost", "Count", and "Total" columns are all used:
+            if (
+                "Cost" in StVars.records_invalid[iter8].keys()
+                and "Count" in StVars.records_invalid[iter8].keys()
+                and "Total" in StVars.records_invalid[iter8].keys()
+            ):
+                # Skip the 'math' variable if any of the required fields are empty:
+                if (
+                    StVars.records_invalid[iter8]["Cost"] != ""
+                    and StVars.records_invalid[iter8]["Count"] != ""
+                    and StVars.records_invalid[iter8]["Total"] != ""
+                ):
+                    math = 1
             # Check the employee field if it's being used:
             if employee == 1:
                 if StVars.records_invalid[iter8]["Employee"] in StVars.valid_employees:
@@ -2660,9 +2809,17 @@ def validate_all():
                     in StVars.valid_departments
                 ):
                     total += 1
+            # Check the math across valid fields:
+            if math == 1:
+                if StVars.records_invalid[iter8]["Total"] == round(
+                    StVars.records_invalid[iter8]["Cost"]
+                    * StVars.records_invalid[iter8]["Count"],
+                    2,
+                ):
+                    total += 1
             # If all used fields pass validation AND there aren't any empty fields, turn the invalid record into a temp
             # record instead:
-            if (total == (employee + location + department)) and (
+            if (total == (employee + location + department + math)) and (
                 "" not in list(StVars.records_invalid[iter8].values())
             ):
                 StVars.records_invalid[iter8]["Status"] = "Temporary"
@@ -2825,6 +2982,39 @@ def validate_temp():
         if "Total" in record.keys():
             if type(record["Total"]) != str:
                 record["Total"] = round(record["Total"], 2)
+        # If the "Total" field is missing, add it and auto-calculate its value:
+        if (
+            "Count" in record.keys()
+            and "Cost" in record.keys()
+            and "Total" not in record.keys()
+        ):
+            if record["Count"] != "" and record["Cost"] != "":
+                record["Total"] = round(record["Count"] * record["Cost"], 2)
+            # If both fields required for the math are present, but one is empty, empty the "Total" field, too:
+            else:
+                record["Total"] = ""
+        # If the "Cost" field is missing, add it and auto-calculate its value:
+        elif (
+            "Count" in record.keys()
+            and "Cost" not in record.keys()
+            and "Total" in record.keys()
+        ):
+            if record["Count"] != "" and record["Total"] != "":
+                record["Cost"] = round(record["Total"] / record["Count"], 2)
+            # If both fields required for the math are present, but one is empty, empty the "Cost" field, too:
+            else:
+                record["Cost"] = ""
+        # If the "Count" field is missing, add it and auto-calculate its value:
+        elif (
+            "Count" not in record.keys()
+            and "Cost" in record.keys()
+            and "Total" in record.keys()
+        ):
+            if record["Cost"] != "" and record["Total"] != "":
+                record["Count"] = int(record["Total"] / record["Cost"])
+            # If both fields required for the math are present, but one is empty, empty the "Count" field, too:
+            else:
+                record["Count"] = ""
     # Ensure the data is sorted by its first column, from oldest to most recent:
     # * Note that 'reverse' defaults to False, so this isn't actually needed, but I'm leaving it there anyway.
     if len(data_loaded) > 0:
@@ -2874,6 +3064,7 @@ def validate_temp():
             invalid8 += 1
         # Otherwise, add them to the temp records list:
         else:
+            data_loaded[0]["Status"] = "Temporary"
             StVars.records_temp.append(data_loaded[0])
             data_loaded.remove(data_loaded[0])
             # Count the number of successful record imports:
@@ -2987,6 +3178,12 @@ toggle_temp = tk.IntVar(root)
 toggle_invalid = tk.IntVar(root)
 toggle_deleted = tk.IntVar(root)
 
+# Section: Chart checkbox variables
+chart_saved = tk.IntVar(root)
+chart_temp = tk.IntVar(root)
+chart_invalid = tk.IntVar(root)
+chart_deleted = tk.IntVar(root)
+
 # Section: Menu Bar
 # Updated: All good for now.
 # Define the menu bar itself:
@@ -3002,6 +3199,34 @@ file_menu.add_command(label="Exit SalesTrax", command=exit_functions)
 menu_bar.add_cascade(label="File", menu=file_menu)
 # Define the "Edit Menu" and its commands:
 edit_menu = tk.Menu(menu_bar, tearoff=0)
+edit_menu.add_command(
+    label="Select All",
+    state="disabled",
+    command=lambda: (
+        base_tree.selection_add(base_tree.get_children())
+        if len(base_tree.get_children()) > 0
+        else do_nothing()
+    ),
+)
+edit_menu.add_command(
+    label="Select None",
+    state="disabled",
+    command=lambda: (
+        base_tree.selection_remove(base_tree.get_children())
+        if len(base_tree.get_children()) > 0
+        else do_nothing()
+    ),
+)
+edit_menu.add_command(
+    label="Invert Selection",
+    state="disabled",
+    command=lambda: (
+        base_tree.selection_toggle(base_tree.get_children())
+        if len(base_tree.get_children()) > 0
+        else do_nothing()
+    ),
+)
+edit_menu.add_separator()
 edit_menu.add_command(label="Refresh Table", state="disabled", command=refresh_table)
 edit_menu.add_separator()
 edit_menu.add_command(
@@ -3214,7 +3439,7 @@ btn_help = tk.Button(
 btn_logo = tk.Button(
     shortcut_bar,
     image=img_logo,
-    text="SalesTrax v0.1.6 ",
+    text="SalesTrax v0.1.7 ",
     font='"consolas" 12 italic bold',
     fg="gray",
     activebackground="black",
@@ -3638,21 +3863,61 @@ chart_left_frame = tk.Frame(chart_def_frame)
 # Define the frame for the control buttons:
 chart_right_frame = tk.Frame(chart_def_frame)
 # Chart type label:
-chart_type_label = tk.Label(chart_left_frame, text="Chart Type", anchor="e")
+chart_type_label = tk.Label(chart_left_frame, text="Chart Type:", anchor="e")
 # Combo box for defining the type of chart to generate:
 chart_type_combo = ttk.Combobox(chart_left_frame, values=["Line Chart", "Bar Chart"])
 # X-axis label:
-chart_x_label = tk.Label(chart_left_frame, text="X-Axis", anchor="e")
+chart_x_label = tk.Label(chart_left_frame, text="X-Axis:", anchor="e")
 # Combo box for defining the x-axis to use in the bar chart:
 chart_x_combo = ttk.Combobox(chart_left_frame, values=[""])
-# Multi-chart label:
-chart_m_label = tk.Label(chart_left_frame, text="Multi-Chart", anchor="e")
+# Rounding label:
+chart_r_label = tk.Label(chart_left_frame, text="Rounding:", anchor="e")
 # Combo box for defining the y-axis to use in the bar chart:
-chart_m_combo = ttk.Combobox(chart_left_frame, values=[""])
+chart_r_combo = ttk.Combobox(chart_left_frame, values=[""])
 # Y-axis label:
-chart_y_label = tk.Label(chart_left_frame, text="Y-Axis", anchor="e")
+chart_y_label = tk.Label(chart_left_frame, text="Y-Axis:", anchor="e")
 # Combo box for defining the y-axis to use in the bar chart:
 chart_y_combo = ttk.Combobox(chart_left_frame, values=[""])
+# Checkbutton for including saved records in chart generation:
+chart_saved_check = tk.Checkbutton(
+    chart_left_frame,
+    text="Include Saved",
+    anchor="w",
+    width=12,
+    onvalue=1,
+    offvalue=0,
+    variable=chart_saved,
+)
+# Checkbutton for including temp records in chart generation:
+chart_temp_check = tk.Checkbutton(
+    chart_left_frame,
+    text="Include Temporary",
+    anchor="w",
+    width=12,
+    onvalue=1,
+    offvalue=0,
+    variable=chart_temp,
+)
+# Checkbutton for including deleted records in chart generation:
+chart_deleted_check = tk.Checkbutton(
+    chart_left_frame,
+    text="Include Deleted",
+    anchor="w",
+    width=12,
+    onvalue=1,
+    offvalue=0,
+    variable=chart_deleted,
+)
+# Checkbutton for including invalid records in chart generation:
+chart_invalid_check = tk.Checkbutton(
+    chart_left_frame,
+    text="Include Invalid",
+    anchor="w",
+    width=12,
+    onvalue=1,
+    offvalue=0,
+    variable=chart_invalid,
+)
 # Define the "OK" button:
 chart_ok_button = tk.Button(
     chart_right_frame,
@@ -3694,12 +3959,16 @@ chart_left_frame.pack(side="left", padx=(0, 10), pady=(30, 40))
 chart_right_frame.pack(side="right", padx=(10, 40), pady=(30, 40))
 chart_type_label.grid(row=0, column=0)
 chart_type_combo.grid(row=0, column=1)
-chart_x_label.grid(row=0, column=2)
-chart_x_combo.grid(row=0, column=3)
-chart_m_label.grid(row=1, column=0)
-chart_m_combo.grid(row=1, column=1)
-chart_y_label.grid(row=1, column=2)
-chart_y_combo.grid(row=1, column=3)
+chart_x_label.grid(row=0, column=2, padx=(10, 0))
+chart_x_combo.grid(row=0, column=3, padx=(0, 10))
+chart_r_label.grid(row=1, column=0)
+chart_r_combo.grid(row=1, column=1)
+chart_y_label.grid(row=1, column=2, padx=(10, 0))
+chart_y_combo.grid(row=1, column=3, padx=(0, 10))
+chart_saved_check.grid(row=0, column=4)
+chart_temp_check.grid(row=0, column=5)
+chart_deleted_check.grid(row=1, column=4)
+chart_invalid_check.grid(row=1, column=5)
 chart_ok_button.pack(side="top")
 chart_cancel_button.pack(side="bottom")
 # Hide the window by default:
@@ -3715,6 +3984,7 @@ glb_theme = ttk.Style(root).theme_use("winnative")
 # Check if 'odfpy' module is installed and set its boolean accordingly:
 try:
     import odf
+
     StVars.odf_installed = True
 except ModuleNotFoundError:
     StVars.odf_installed = False

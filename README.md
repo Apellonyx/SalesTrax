@@ -1,12 +1,12 @@
-# SalesTrax v0.1.6
+# SalesTrax v0.1.7
 
 ---
 
 **Program Name**: SalesTrax  
-**Version**: 0.1.6  
+**Version**: 0.1.7  
 **Status**: Prototype  
 **Created on**: 2023-04-09  
-**Last updated**: 2023-05-01  
+**Last updated**: 2023-05-03  
 **Created with**: Python 3.11.2  
 **Author**: Danny Fleenor  
 **Contributors**:
@@ -57,8 +57,8 @@ Update 0.1.4 added individual record editing as well as simple line and bar char
 datasets. To edit a record, simply double click it in the viewport table, and a popup will allow you to change the
 values in that record. Click "Accept" when you're done, and it will update the record instantly! It follows the same
 record validation process as every other validation check, so invalid datatypes will be ignored and user-defined
-validation controls will be respected, but it won't prevent mathematical miscalculations. I plan to remedy the math
-thing soon, though, and there are also plans to add a "New Record" feature for creating entirely new records. The
+validation controls will be respected, and an addition from update 0.1.7 also detects mathematical miscalculations.
+There are also plans to add a "New Record" feature for creating entirely new records, but it may take a while. The
 chart generation features take filters into account and only displays data in saved records, allowing for further
 customization of data inclusion. Results are also auto-sorted by the column chosen for the x-axis, so you don't have
 to worry about your figures looking all wonky. Some datatype combinations are not yet supported (namely, string
@@ -79,6 +79,16 @@ the y-axis are dependent upon the value chosen for the x-axis, preventing incomp
 auto-populated combo-box for multiple line or bar groupings, but it is not yet functional (you can still set its
 value without causing errors, but the entire field will be ignored in the actual chart generation process).
 
+Update 0.1.7 improves chart generation yet again, adding a user-defined rounding feature to applicable x-axis
+selections for more fine-tuned charts. It also introduces the ability to create charts with records with any "Status"
+value, including multiple "Status" combinations. The concept of "Multi-Charts" has been fully scrapped for now, as it
+proved to be much more difficult than I'd anticipated. It may make a comeback in later updates, but I'm making no
+promises. Record selection is a bit better now, too, with the addition of "Select All", "Select None", and "Invert
+Selection" to the "Edit" menu, complete with keybindings. The long-awaited mathematical validation algorithm also
+makes its debut in this update, invalidating those records with incorrect calculations. A smaller--but perhaps even
+more powerful--feature creates a column for "Cost", "Count", or "Total" when only one of the three is missing from
+the loaded file, so you don't actually need to do the math yourself; just automate it!
+
 As mentioned in the last few updates, PROPER filtering will not be available until a later update, but I'm already
 developing an algorithm for that in a separate testing file. It's just being difficult. Soon™, though!
 
@@ -92,9 +102,12 @@ me, I tried it). Just do your best to ignore them, or better yet, view the file 
 throw any warnings at all.
 
 ### Installation:
-While SalesTrax itself isn't particularly large, it does have a few hefty dependencies, and none of them are packaged
-with the code. To ensure everything required by SalesTrax is installed, simply open a command prompt instance in the
-SalesTrax root folder (the one where `main.py` can be found) and run the following line:
+Before you do anything else, make sure to unzip the folder to a safe location. This ensures that external files, such
+as images, are able to properly load.
+
+Next, while SalesTrax itself isn't particularly large, it does have a few hefty dependencies, and none of them are
+packaged with the code. To ensure everything required by SalesTrax is installed, simply open a command prompt instance
+in the SalesTrax root folder (the one where `main.py` can be found) and run the following line:
 ```
 pip install -U -r requirements.txt
 ```

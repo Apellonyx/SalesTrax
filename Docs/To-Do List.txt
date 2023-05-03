@@ -23,10 +23,6 @@ And lines beginning with "&" are fully unimplemented.
 #Alt: Link to GitHub Wiki instead. The "Help" menu list already includes this as an option.
 & This would require significantly less coding, resulting in a smaller file size.
 
-#Task: Add "Select All" back to the "Edit" menu cascade and make it functional.
-& Maybe also make an "Invert Selection" option in the "Edit" menu, too.
-& A "Hide Selected" button would be nice, too, as a form of manual filtering that doesn't require status changes.
-
 #Task: Add functionality to the "Toggle Filter..." button when a filter or sort is NOT already active.
 & This should raise a new dialog for modifying filters in a more complete way:
 &	It should have a tab for each column, each containing two listboxes and four buttons:
@@ -40,13 +36,6 @@ And lines beginning with "&" are fully unimplemented.
 &	Ask the user if they wish to clear the current filters and sorts or if they wish to modify the existing ones.
 &	If "Clear", simply clear the filters and sorts.
 &	If "Modify", open the "Choose Filter" dialog with any active filters and sorts already in place.
-
-#Task: Combine all chart types into one persistent window.
-^ There should be a "Choose Chart Type" combo-box.
-^ All other fields should auto-generate based on the chosen chart type.
-^ "Y-Axis" should be disabled until "X-Axis" is chosen, then auto-populate based on compatible values.
-& There should be checkboxes for including temporary, deleted, and invalid records.
-&	Individual invalid records will still be excluded if their x or y value is invalid.
 
 #Task: Create a question popup asking if the user wants ODS timestamps in string format or as an integer.
 
@@ -82,11 +71,3 @@ And lines beginning with "&" are fully unimplemented.
 &	When the program encounters a value that isn't in the validation list for that field, run the spell-checker.
 &	If it finds a near-match in the relevant list, display a popup asking if the field should be corrected.
 &	Make the spell-checking function opt-in for the user with a checkbox in each validation list window.
-
-#Task: Create mathematical validation algorithm.
-& If 'Cost', 'Quantity', and 'Total' columns are all present, auto-calculate the expected value for 'Total':
-&	If incorrect, correct it.
-& If 'Cost', 'Quantity', and 'Total' columns are present, AND only one of the three cells is empty:
-&	Auto-calculate the missing value based on the present values.
-& If 'Cost' and 'Quantity' columns are present, but the 'Total' column is missing, create 'Total' and auto-fill it.
-& Do the same as above for any other combination of 'Cost', 'Quantity', and 'Total', where only one is missing.

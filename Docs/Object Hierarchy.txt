@@ -110,10 +110,14 @@
 					- chart_type_combo
 					- chart_x_label
 					- chart_x_combo
-					- chart_m_label
-					- chart_m_combo
+					- chart_r_label
+					- chart_r_combo
 					- chart_y_label
 					- chart_y_combo
+					- chart_deleted_check
+					- chart_invalid_check
+					- chart_saved_check
+					- chart_temp_check
 				- chart_right_frame
 					- chart_ok_button
 					- chart_cancel_button

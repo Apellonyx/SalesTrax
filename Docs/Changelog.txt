@@ -1,3 +1,48 @@
+v0.1.7 2023-05-03
+	- General description: Improved charts, selections, math validation.
+	- Detailed description:
+		- Added "Select All", "Select None", and "Invert Selection" commands and their keybindings.
+		- Added mathematical validation checks.
+		- Added auto-calculation and appendment of important numeric columns when one is missing.
+		- Added better and more detailed chart generation controls.
+		- Replaced "Multi-Chart" concept with x-axis rounding for applicable fields.
+	- Itemized changes:
+		- Changes to 'main.py':
+			- Additions:
+				- Added chart controls for including each of the four record statuses in the chart results.
+				- Added "Invert Selection" option to the "Edit" menu cascade (keybinding: "<Control-E>").
+				- Added mathematical validation checks to 'validate_all()'.
+				- Added rounding selection for timestamps and floats used in the x-axis of charts.
+				- Added scripted calculation and appendment of "Cost", "Count", or "Total" column when only two of the
+					three are present in the loaded file.
+				- Added "Select All" option to the "Edit" menu cascade (keybinding: "<Control-A>").
+				- Added "Select None" option to the "Edit" menu cascade (keybinding: "<Control-D>").
+				- Added the following object variables:
+					- 'chart_saved': tk.IntVar
+					- 'chart_temp': tk.IntVar
+					- 'chart_invalid': tk.IntVar
+					- 'chart_deleted': tk.IntVar
+				- Added the following persistent objects:
+					- 'chart_deleted_check'
+					- 'chart_invalid_check'
+					- 'chart_saved_check'
+					- 'chart_temp_check'
+			- Modifications and corrections:
+				- Moved the initial classification of loaded records in 'pop_temp()' to occur after the initial
+					validation check in 'validate_temp()'.
+			- Removals:
+				- Removed bar width resizing for charts with more than 31 bars.
+					- It was not consistently applied, due to the way 'matplotlib' handles plot point configuration.
+				- Removed "Multi-Chart" concept entirely (for now, at least).
+			- Documentation Changes:
+				- None
+		- New files:
+			- None
+		- Notable changes to other files:
+			- None
+
+-----
+
 v0.1.6 2023-05-01
 	- General description: Refactored chart generation. Validation bugfix.
 	- Detailed description:
